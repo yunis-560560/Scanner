@@ -1092,8 +1092,15 @@ function detectDocumentCorners(imgData) {
   // Validate detected coordinate points
   if (!tl || !tr || !br || !bl) return null;
   
-  // Check if coordinates represent a reasonable size block (e.g. at least 30% of image size)
-  if (Math.abs(tr.x - tl.x) < w * 0.3 || Math.abs(br.y - tr.y) < h * 0.3) {
+  // Quadrant-based constraints: corners must reside in their respective outer quadrants
+  // (prevents incorrect internal locking onto faces, text blocks, stamps, etc.)
+  if (tl.x > w * 0.40 || tl.y > h * 0.40) return null;
+  if (tr.x < w * 0.60 || tr.y > h * 0.40) return null;
+  if (br.x < w * 0.60 || br.y < h * 0.60) return null;
+  if (bl.x > w * 0.40 || bl.y < h * 0.60) return null;
+  
+  // Check if coordinates represent a reasonable size block (e.g. at least 45% of image size)
+  if (Math.abs(tr.x - tl.x) < w * 0.45 || Math.abs(br.y - tr.y) < h * 0.45) {
     return null;
   }
   
@@ -1135,43 +1142,61 @@ async function resetCropCorners() {
    ============================================================ */
 let activeHandle = null;
 
+let activeHandleId = null;
+
 function setupDragHandlers() {
-  const handles = [dom.hTL, dom.hTR, dom.hBR, dom.hBL];
+  const svg = dom.cropSvg;
   
-  handles.forEach(handle => {
-    handle.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      activeHandle = handle;
-      handle.setPointerCapture(e.pointerId);
-    });
-
-    handle.addEventListener('pointermove', (e) => {
-      if (activeHandle !== handle) return;
-      e.preventDefault();
-
-      const rect = dom.cropSvg.getBoundingClientRect();
-      let x = e.clientX - rect.left;
-      let y = e.clientY - rect.top;
-
-      x = Math.max(0, Math.min(rect.width, x));
-      y = Math.max(0, Math.min(rect.height, y));
-
-      const key = handle.id.substring(1).toLowerCase(); // 'tl', 'tr', 'br', 'bl'
-      state.cropCorners[key] = { x, y };
-
-      updateCropPolygon();
-    });
-
-    const release = (e) => {
-      if (activeHandle === handle) {
-        handle.releasePointerCapture(e.pointerId);
-        activeHandle = null;
+  svg.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Find which handle is closest to the pointer down position within a 36px touch area
+    let closestId = null;
+    let minD = 36;
+    
+    for (const [key, pos] of Object.entries(state.cropCorners)) {
+      const dx = pos.x - x;
+      const dy = pos.y - y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < minD) {
+        minD = d;
+        closestId = key; // 'tl', 'tr', 'br', 'bl'
       }
-    };
-
-    handle.addEventListener('pointerup', release);
-    handle.addEventListener('pointercancel', release);
+    }
+    
+    if (closestId) {
+      activeHandleId = closestId;
+      svg.setPointerCapture(e.pointerId);
+    }
   });
+
+  svg.addEventListener('pointermove', (e) => {
+    if (!activeHandleId) return;
+    e.preventDefault();
+
+    const rect = svg.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+
+    x = Math.max(0, Math.min(rect.width, x));
+    y = Math.max(0, Math.min(rect.height, y));
+
+    state.cropCorners[activeHandleId] = { x, y };
+    updateCropPolygon();
+  });
+
+  const release = (e) => {
+    if (activeHandleId) {
+      svg.releasePointerCapture(e.pointerId);
+      activeHandleId = null;
+    }
+  };
+
+  svg.addEventListener('pointerup', release);
+  svg.addEventListener('pointercancel', release);
 }
 
 /* ============================================================
