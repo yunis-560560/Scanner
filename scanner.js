@@ -1,6 +1,8 @@
 /**
  * ============================================================
  * Passport Verification — e-KYC Scanner Engine
+ * © 2026 yunis-560560. All Rights Reserved.
+ * Original work — no third-party licensed code used.
  * ============================================================
  *
  * State Machine:
