@@ -50,6 +50,9 @@ const state = {
   prevEdgeMap:    null,         // for motion/steadiness detection
   qrTimerId:      null,
   qrSecsLeft:     QR_EXPIRE_SECS,
+  cropImageSrc:   null,         // captured raw frame
+  cropCorners:    { tl: {x:0, y:0}, tr: {x:0, y:0}, br: {x:0, y:0}, bl: {x:0, y:0} },
+  cropImageSize:  { w: 0, h: 0 }, // raw image width and height
 };
 
 /* ============================================================
@@ -107,6 +110,18 @@ const dom = {
   thumbFrontImg:    $('thumbFrontImg'),
   thumbBackImg:     $('thumbBackImg'),
   successContinueBtn: $('successContinueBtn'),
+
+  /* Interactive Crop */
+  cropScreen:       $('cropScreen'),
+  cropImgPreview:   $('cropImgPreview'),
+  cropSvg:          $('cropSvg'),
+  cropPolygon:      $('cropPolygon'),
+  cropResetBtn:     $('cropResetBtn'),
+  cropConfirmBtn:   $('cropConfirmBtn'),
+  hTL:              $('hTL'),
+  hTR:              $('hTR'),
+  hBR:              $('hBR'),
+  hBL:              $('hBL'),
 };
 
 /* ============================================================
@@ -199,6 +214,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // Update desktop stepper to step 3 complete
     completeDeskStep3();
   });
+  
+  // Wire crop actions
+  dom.cropConfirmBtn.addEventListener('click', confirmCropAdjustment);
+  dom.cropResetBtn.addEventListener('click', resetCropCorners);
+  setupDragHandlers();
 });
 
 /* ============================================================
@@ -754,17 +774,10 @@ async function triggerCapture() {
 
   await sleep(280);
 
-  if (state.phase === 'FRONT_SCAN') {
-    state.capturedFront = dataURL;
-    state.phase = 'TRANSITION';
-    showTransitionOverlay();
-  } else if (state.phase === 'BACK_SCAN') {
-    state.capturedBack = dataURL;
-    state.phase = 'SUCCESS';
-    stopCamera();
-    dom.mobileView.style.display = 'none';
-    showSuccessScreen();
-  }
+  // Stop camera and open crop adjust screen
+  stopCamera();
+  dom.mobileView.style.display = 'none';
+  openCropScreen(dataURL, canvas.width, canvas.height);
 }
 
 /* ============================================================
@@ -910,3 +923,282 @@ document.addEventListener('visibilitychange', () => {
     beginDetectionLoop();
   }
 });
+
+
+/* ============================================================
+   INTERACTIVE CROP & CORNER ADJUSTER
+   ============================================================ */
+function openCropScreen(rawImageSrc, width, height) {
+  state.cropImageSrc = rawImageSrc;
+  state.cropImageSize = { w: width, h: height };
+  
+  dom.cropImgPreview.src = rawImageSrc;
+  
+  dom.cropImgPreview.onload = () => {
+    initCropUI();
+  };
+
+  dom.cropScreen.style.display = 'flex';
+}
+
+function initCropUI() {
+  const rect = dom.cropImgPreview.getBoundingClientRect();
+  
+  dom.cropSvg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+  dom.cropSvg.style.width = `${rect.width}px`;
+  dom.cropSvg.style.height = `${rect.height}px`;
+
+  // Standard inset box corners for default crop placement
+  const padX = rect.width * 0.05;
+  const padY = rect.height * 0.05;
+
+  state.cropCorners = {
+    tl: { x: padX, y: padY },
+    tr: { x: rect.width - padX, y: padY },
+    br: { x: rect.width - padX, y: rect.height - padY },
+    bl: { x: padX, y: rect.height - padY }
+  };
+
+  updateCropPolygon();
+}
+
+function updateCropPolygon() {
+  const { tl, tr, br, bl } = state.cropCorners;
+  
+  setHandlePos(dom.hTL, tl);
+  setHandlePos(dom.hTR, tr);
+  setHandlePos(dom.hBR, br);
+  setHandlePos(dom.hBL, bl);
+
+  dom.cropPolygon.setAttribute('points', `${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`);
+}
+
+function setHandlePos(el, pos) {
+  el.setAttribute('cx', String(pos.x));
+  el.setAttribute('cy', String(pos.y));
+}
+
+function resetCropCorners() {
+  initCropUI();
+}
+
+/* ============================================================
+   DRAGGABLE SVG HANDLES
+   ============================================================ */
+let activeHandle = null;
+
+function setupDragHandlers() {
+  const handles = [dom.hTL, dom.hTR, dom.hBR, dom.hBL];
+  
+  handles.forEach(handle => {
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      activeHandle = handle;
+      handle.setPointerCapture(e.pointerId);
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if (activeHandle !== handle) return;
+      e.preventDefault();
+
+      const rect = dom.cropSvg.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      let y = e.clientY - rect.top;
+
+      x = Math.max(0, Math.min(rect.width, x));
+      y = Math.max(0, Math.min(rect.height, y));
+
+      const key = handle.id.substring(1).toLowerCase(); // 'tl', 'tr', 'br', 'bl'
+      state.cropCorners[key] = { x, y };
+
+      updateCropPolygon();
+    });
+
+    const release = (e) => {
+      if (activeHandle === handle) {
+        handle.releasePointerCapture(e.pointerId);
+        activeHandle = null;
+      }
+    };
+
+    handle.addEventListener('pointerup', release);
+    handle.addEventListener('pointercancel', release);
+  });
+}
+
+/* ============================================================
+   PERSPECTIVE WARPING & HOMOGRAPHY SOLVER
+   ============================================================ */
+function confirmCropAdjustment() {
+  // Show loading indicator in button
+  dom.cropConfirmBtn.textContent = 'Processing…';
+  dom.cropConfirmBtn.disabled = true;
+
+  // Let browser render the loading state
+  setTimeout(() => {
+    const rect = dom.cropImgPreview.getBoundingClientRect();
+    const scaleX = state.cropImageSize.w / rect.width;
+    const scaleY = state.cropImageSize.h / rect.height;
+
+    // Map screen handles to original high-res captured coordinates
+    const cornersInRaw = {
+      tl: { x: state.cropCorners.tl.x * scaleX, y: state.cropCorners.tl.y * scaleY },
+      tr: { x: state.cropCorners.tr.x * scaleX, y: state.cropCorners.tr.y * scaleY },
+      br: { x: state.cropCorners.br.x * scaleX, y: state.cropCorners.br.y * scaleY },
+      bl: { x: state.cropCorners.bl.x * scaleX, y: state.cropCorners.bl.y * scaleY }
+    };
+
+    const tempImg = new Image();
+    tempImg.src = state.cropImageSrc;
+    tempImg.onload = () => {
+      const rawCanvas = document.createElement('canvas');
+      rawCanvas.width = state.cropImageSize.w;
+      rawCanvas.height = state.cropImageSize.h;
+      const rawCtx = rawCanvas.getContext('2d');
+      rawCtx.drawImage(tempImg, 0, 0);
+
+      const srcImgData = rawCtx.getImageData(0, 0, rawCanvas.width, rawCanvas.height);
+
+      // standard passport size aspect ratio output (1.42 : 1)
+      const destW = 1000;
+      const destH = 704;
+      const destCanvas = document.createElement('canvas');
+      destCanvas.width = destW;
+      destCanvas.height = destH;
+      const destCtx = destCanvas.getContext('2d');
+      const destImgData = destCtx.createImageData(destW, destH);
+
+      const srcPoints = [
+        cornersInRaw.tl,
+        cornersInRaw.tr,
+        cornersInRaw.br,
+        cornersInRaw.bl
+      ];
+      const destPoints = [
+        { x: 0, y: 0 },
+        { x: destW, y: 0 },
+        { x: destW, y: destH },
+        { x: 0, y: destH }
+      ];
+
+      const hMatrix = getHomographyMatrix(destPoints, srcPoints);
+
+      warpPerspectiveJS(srcImgData, destImgData, hMatrix);
+      destCtx.putImageData(destImgData, 0, 0);
+
+      const flattenedDataURL = destCanvas.toDataURL('image/jpeg', 0.95);
+
+      // Re-enable button
+      dom.cropConfirmBtn.textContent = 'Done';
+      dom.cropConfirmBtn.disabled = false;
+
+      // Close crop overlay screen and advance scan state
+      dom.cropScreen.style.display = 'none';
+
+      if (state.phase === 'FRONT_SCAN') {
+        state.capturedFront = flattenedDataURL;
+        state.phase = 'TRANSITION';
+        showTransitionOverlay();
+      } else if (state.phase === 'BACK_SCAN') {
+        state.capturedBack = flattenedDataURL;
+        state.phase = 'SUCCESS';
+        stopCamera();
+        dom.mobileView.style.display = 'none';
+        showSuccessScreen();
+      }
+    };
+  }, 50);
+}
+
+function getHomographyMatrix(src, dst) {
+  const A = [];
+  for (let i = 0; i < 4; i++) {
+    const s = src[i], d = dst[i];
+    A.push([s.x, s.y, 1, 0, 0, 0, -d.x * s.x, -d.x * s.y, d.x]);
+    A.push([0, 0, 0, s.x, s.y, 1, -d.y * s.x, -d.y * s.y, d.y]);
+  }
+  return solveLinearSystem8(A);
+}
+
+function solveLinearSystem8(matrix) {
+  const n = 8;
+  for (let i = 0; i < n; i++) {
+    let maxRow = i;
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(matrix[k][i]) > Math.abs(matrix[maxRow][i])) {
+        maxRow = k;
+      }
+    }
+    const temp = matrix[i];
+    matrix[i] = matrix[maxRow];
+    matrix[maxRow] = temp;
+
+    const pivot = matrix[i][i];
+    if (Math.abs(pivot) < 1e-10) continue;
+    for (let j = i; j <= n; j++) {
+      matrix[i][j] /= pivot;
+    }
+
+    for (let k = 0; k < n; k++) {
+      if (k === i) continue;
+      const factor = matrix[k][i];
+      for (let j = i; j <= n; j++) {
+        matrix[k][j] -= factor * matrix[i][j];
+      }
+    }
+  }
+  const res = new Float32Array(9);
+  for (let i = 0; i < n; i++) {
+    res[i] = matrix[i][n];
+  }
+  res[8] = 1.0;
+  return res;
+}
+
+function warpPerspectiveJS(srcImgData, destImgData, h) {
+  const sw = srcImgData.width, sh = srcImgData.height;
+  const dw = destImgData.width, dh = destImgData.height;
+  const sData = srcImgData.data;
+  const dData = destImgData.data;
+
+  const h0 = h[0], h1 = h[1], h2 = h[2];
+  const h3 = h[3], h4 = h[4], h5 = h[5];
+  const h6 = h[6], h7 = h[7], h8 = h[8];
+
+  for (let y = 0; y < dh; y++) {
+    for (let x = 0; x < dw; x++) {
+      const w = h6 * x + h7 * y + h8;
+      const sx = (h0 * x + h1 * y + h2) / w;
+      const sy = (h3 * x + h4 * y + h5) / w;
+
+      if (sx >= 0 && sx < sw - 1 && sy >= 0 && sy < sh - 1) {
+        const xFloor = Math.floor(sx);
+        const yFloor = Math.floor(sy);
+        const xWeight = sx - xFloor;
+        const yWeight = sy - yFloor;
+
+        const idx00 = (yFloor * sw + xFloor) * 4;
+        const idx10 = (yFloor * sw + (xFloor + 1)) * 4;
+        const idx01 = ((yFloor + 1) * sw + xFloor) * 4;
+        const idx11 = ((yFloor + 1) * sw + (xFloor + 1)) * 4;
+
+        const destIdx = (y * dw + x) * 4;
+
+        for (let c = 0; c < 4; c++) {
+          const val = (1 - xWeight) * (1 - yWeight) * sData[idx00 + c] +
+                      xWeight * (1 - yWeight) * sData[idx10 + c] +
+                      (1 - xWeight) * yWeight * sData[idx01 + c] +
+                      xWeight * yWeight * sData[idx11 + c];
+          dData[destIdx + c] = Math.round(val);
+        }
+      } else {
+        const destIdx = (y * dw + x) * 4;
+        dData[destIdx] = 247;
+        dData[destIdx + 1] = 248;
+        dData[destIdx + 2] = 250;
+        dData[destIdx + 3] = 255;
+      }
+    }
+  }
+}
+

@@ -386,6 +386,36 @@
     </button>
   </div>
 </div>
+<!-- ════════════════════════════════════════════════════════════
+     INTERACTIVE CROP / CORNER ADJUST SCREEN
+     ════════════════════════════════════════════════════════════ -->
+<div class="crop-screen" id="cropScreen" style="display:none" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="crop-card">
+    <h2 class="crop-title" id="cropTitle">Adjust Corners</h2>
+    <p class="crop-desc">Drag the 4 green circles to align exactly with the corners of your passport.</p>
+    
+    <!-- Image preview area with interactive SVG overlay -->
+    <div class="crop-view-container">
+      <img id="cropImgPreview" class="crop-img-preview" alt="Document crop preview" />
+      <svg id="cropSvg" class="crop-svg" xmlns="http://www.w3.org/2000/svg">
+        <polygon id="cropPolygon" points="0,0 0,0 0,0 0,0" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853" stroke-width="2.5" />
+        <circle id="hTL" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
+        <circle id="hTR" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
+        <circle id="hBR" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
+        <circle id="hBL" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
+      </svg>
+    </div>
+
+    <div class="crop-actions">
+      <button class="crop-btn crop-btn-sec" id="cropResetBtn">
+        Reset
+      </button>
+      <button class="crop-btn crop-btn-prim" id="cropConfirmBtn">
+        Done
+      </button>
+    </div>
+  </div>
+</div>
 
 
 <!-- ════════════════════════════════════════════════════════════
