@@ -117,6 +117,7 @@ const dom = {
   /* Interactive Crop */
   cropScreen:       $('cropScreen'),
   cropImgPreview:   $('cropImgPreview'),
+  cropGlareWarning: $('cropGlareWarning'),
   cropSvg:          $('cropSvg'),
   cropPolygon:      $('cropPolygon'),
   cropResetBtn:     $('cropResetBtn'),
@@ -929,6 +930,9 @@ function openCropScreen(rawImageSrc, width, height) {
   state.cropImageSrc = rawImageSrc;
   state.cropImageSize = { w: width, h: height };
   
+  // Hide glare warning initially
+  if (dom.cropGlareWarning) dom.cropGlareWarning.style.display = 'none';
+
   // Set the container aspect ratio to match the raw captured photo aspect ratio exactly
   const container = dom.cropImgPreview.parentElement;
   if (container) {
@@ -951,7 +955,7 @@ function initCropUI() {
   dom.cropSvg.style.width = `${rect.width}px`;
   dom.cropSvg.style.height = `${rect.height}px`;
 
-  // Try auto corner detection first
+  // Try auto corner detection and glare check
   let detected = null;
   try {
     const canvas = document.createElement('canvas');
@@ -963,6 +967,12 @@ function initCropUI() {
     ctx.drawImage(dom.cropImgPreview, 0, 0, w, h);
     const imgData = ctx.getImageData(0, 0, w, h);
     
+    // Check for glare/over-lighting on captured image
+    const hasGlare = checkImageGlare(imgData);
+    if (hasGlare && dom.cropGlareWarning) {
+      dom.cropGlareWarning.style.display = 'flex';
+    }
+
     const corners = detectDocumentCorners(imgData);
     if (corners) {
       // Map coordinates back to screen SVG coordinate space
@@ -976,7 +986,7 @@ function initCropUI() {
       };
     }
   } catch (err) {
-    console.warn('Corner detection error:', err);
+    console.warn('Corner detection/glare check error:', err);
   }
 
   if (detected) {
@@ -994,6 +1004,28 @@ function initCropUI() {
   }
 
   updateCropPolygon();
+}
+
+/* ============================================================
+   IMAGE GLARE DETECTION (Over-lighting Analyzer)
+   ============================================================ */
+function checkImageGlare(imgData) {
+  const data = imgData.data;
+  let glareCount = 0;
+  const total = imgData.width * imgData.height;
+  const step = 3; // sample every 3rd pixel
+  
+  for (let i = 0; i < data.length; i += 4 * step) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Highlighted pixels (pure white over-lit reflection)
+    if (luma > 230) {
+      glareCount++;
+    }
+  }
+  
+  const glareRatio = glareCount / (total / step);
+  return glareRatio > 0.015; // Warning triggers if glare exceeds 1.5% of total pixels
 }
 
 /* ============================================================

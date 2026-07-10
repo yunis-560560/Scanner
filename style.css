@@ -1748,6 +1748,23 @@ a {
   letter-spacing: -0.02em;
 }
 
+.crop-glare-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  max-width: 380px;
+  width: 100%;
+  color: #FBBF24;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  text-align: left;
+  animation: slide-in 0.25s var(--ease) both;
+}
+
 .crop-desc {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.6);
