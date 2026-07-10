@@ -98,6 +98,9 @@ const dom = {
   mobDetectBarWrap: $('mobDetectBarWrap'),
   mobDetectFill:    $('mobDetectFill'),
 
+  /* Shutter / Capture */
+  shutterBtn:       $('shutterBtn'),
+
   /* Torch */
   torchBtn:         $('torchBtn'),
 
@@ -219,6 +222,9 @@ window.addEventListener('DOMContentLoaded', () => {
   dom.cropConfirmBtn.addEventListener('click', confirmCropAdjustment);
   dom.cropResetBtn.addEventListener('click', resetCropCorners);
   setupDragHandlers();
+
+  // Wire Shutter / Capture button
+  dom.shutterBtn.addEventListener('click', triggerCapture);
 });
 
 /* ============================================================
