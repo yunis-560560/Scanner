@@ -135,7 +135,7 @@ const INSTRUCTIONS = {
     icon: iconSun(),
   },
   reduce_glare: {
-    text: 'Reduce glare by tilting the passport slightly.',
+    text: 'Avoid direct light. Tilt or change the passport position so the passport number is clearly visible.',
     icon: iconGlare(),
   },
   edges_only: {
@@ -582,7 +582,7 @@ function selectInstruction(a) {
   if (brightness < 0.30) return 'brighter';
 
   // Glare
-  if (glareRatio > 0.12) return 'reduce_glare';
+  if (glareRatio > 0.08) return 'reduce_glare';
 
   // Steadiness
   if (steadiness < 0.45) return 'hold_steady';
@@ -791,19 +791,26 @@ async function triggerCapture() {
   const guideY = guideRect.top  - vidRect.top;
 
   // Map to actual video pixel coordinates
-  const srcX = Math.round((guideX + offsetX) * scaleX);
-  const srcY = Math.round((guideY + offsetY) * scaleY);
-  const srcW = Math.round(guideRect.width  * scaleX);
-  const srcH = Math.round(guideRect.height * scaleY);
+  let srcX = Math.round((guideX + offsetX) * scaleX);
+  let srcY = Math.round((guideY + offsetY) * scaleY);
+  let srcW = Math.round(guideRect.width  * scaleX);
+  let srcH = Math.round(guideRect.height * scaleY);
 
-  // Output canvas = guide size (passport aspect ratio 1.42:1)
-  const outW = Math.min(srcW, vw);
-  const outH = Math.min(srcH, vh);
-  canvas.width  = outW;
-  canvas.height = outH;
+  // Auto-crop inset (cut off 5% from each side to remove fingers, spine, and outer edges)
+  const insetX = Math.round(srcW * 0.05);
+  const insetY = Math.round(srcH * 0.05);
+
+  srcX += insetX;
+  srcY += insetY;
+  srcW -= (insetX * 2);
+  srcH -= (insetY * 2);
+
+  // Output canvas = cropped size
+  canvas.width  = srcW;
+  canvas.height = srcH;
 
   // Draw only the cropped guide region
-  ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+  ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
   const dataURL = canvas.toDataURL('image/jpeg', 0.95);
 
