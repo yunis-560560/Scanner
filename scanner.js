@@ -27,7 +27,7 @@
    ============================================================ */
 const CONF_THRESHOLD   = 0.60;   // confidence to enter "almost" state
 const CONF_CAPTURE     = 0.82;   // confidence to trigger auto-capture
-const HOLD_DURATION_MS = 1500;   // ms held at capture confidence before snap
+const HOLD_DURATION_MS = 1000;   // ms held at capture confidence before snap
 const ANALYSIS_RATE_MS = 180;    // frame analysis interval
 const QR_EXPIRE_SECS   = 300;    // 5 minutes
 
@@ -601,8 +601,8 @@ function updateDetection(analysis) {
   // Set instruction text
   setInstruction(instrKey);
 
-  // Auto-capture logic: Must exceed capture confidence AND be held steady
-  if (conf >= CONF_CAPTURE && analysis.steadiness >= 0.75 && !state.captured) {
+  // Auto-capture logic: Must exceed capture confidence and hold
+  if (conf >= CONF_CAPTURE && !state.captured) {
     if (!state.holdStart) {
       state.holdStart = Date.now();
     } else if (Date.now() - state.holdStart >= HOLD_DURATION_MS) {
@@ -751,10 +751,18 @@ async function triggerCapture() {
   const guideX = guideRect.left - vidRect.left;
   const guideY = guideRect.top  - vidRect.top;
 
-  // Capture the FULL camera frame (so the user can adjust crop corners cleanly on the full photo)
-  canvas.width  = vw;
-  canvas.height = vh;
-  ctx.drawImage(video, 0, 0, vw, vh);
+  // Map to actual video pixel coordinates
+  const srcX = Math.round((guideX + offsetX) * scaleX);
+  const srcY = Math.round((guideY + offsetY) * scaleY);
+  const srcW = Math.round(guideRect.width  * scaleX);
+  const srcH = Math.round(guideRect.height * scaleY);
+
+  // Output canvas = guide size (inside the box only)
+  canvas.width  = srcW;
+  canvas.height = srcH;
+
+  // Draw only the cropped guide region
+  ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
   const dataURL = canvas.toDataURL('image/jpeg', 0.95);
 
@@ -763,10 +771,10 @@ async function triggerCapture() {
 
   await sleep(280);
 
-  // Stop camera and open crop adjust screen with full frame
+  // Stop camera and open crop adjust screen with guide box cropped frame
   stopCamera();
   dom.mobileView.style.display = 'none';
-  openCropScreen(dataURL, vw, vh);
+  openCropScreen(dataURL, srcW, srcH);
 }
 
 /* ============================================================
@@ -1076,8 +1084,18 @@ function setHandlePos(el, pos) {
   el.setAttribute('cy', String(pos.y));
 }
 
-function resetCropCorners() {
-  initCropUI();
+async function resetCropCorners() {
+  // Hide crop screen
+  dom.cropScreen.style.display = 'none';
+  
+  // Reset capture status
+  state.captured = false;
+  state.holdStart = null;
+  state.confidence = 0;
+  
+  // Re-open mobile camera view and start camera streaming
+  dom.mobileView.style.display = 'flex';
+  await startCamera();
 }
 
 /* ============================================================
