@@ -743,17 +743,67 @@ async function triggerCapture() {
   // Short pause for "Capturing..." display
   await sleep(350);
 
-  // Capture frame from video
-  const video = dom.camVideo;
-  const vw = video.videoWidth  || 1280;
-  const vh = video.videoHeight || 720;
-  const canvas = dom.camCanvas;
-  canvas.width  = vw;
-  canvas.height = vh;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, vw, vh);
+  // Capture ONLY the guide frame region (crop out fingers & background)
+  const video    = dom.camVideo;
+  const vw       = video.videoWidth  || 1280;
+  const vh       = video.videoHeight || 720;
+  const canvas   = dom.camCanvas;
+  const ctx      = canvas.getContext('2d');
 
-  const dataURL = canvas.toDataURL('image/jpeg', 0.93);
+  // Get the guide frame's bounding rect on screen
+  const guide    = dom.scanGuide;
+  const guideRect = guide.getBoundingClientRect();
+
+  // Get the video element's bounding rect on screen
+  // The video element fills the viewport (object-fit: cover)
+  const videoEl  = video;
+  const vidRect  = videoEl.getBoundingClientRect();
+
+  // Calculate the scale between displayed video pixels and actual video pixels
+  // object-fit: cover scales the video to FILL the element, cropping edges
+  const displayW  = vidRect.width;
+  const displayH  = vidRect.height;
+  const videoAspect   = vw / vh;
+  const displayAspect = displayW / displayH;
+
+  let renderedW, renderedH, offsetX, offsetY;
+  if (videoAspect > displayAspect) {
+    // Video is wider — pillarboxed: height fills, width overflows
+    renderedH = displayH;
+    renderedW = displayH * videoAspect;
+    offsetX   = (renderedW - displayW) / 2;
+    offsetY   = 0;
+  } else {
+    // Video is taller — letterboxed: width fills, height overflows
+    renderedW = displayW;
+    renderedH = displayW / videoAspect;
+    offsetX   = 0;
+    offsetY   = (renderedH - displayH) / 2;
+  }
+
+  const scaleX = vw / renderedW;
+  const scaleY = vh / renderedH;
+
+  // Guide position relative to the video element display area
+  const guideX = guideRect.left - vidRect.left;
+  const guideY = guideRect.top  - vidRect.top;
+
+  // Map to actual video pixel coordinates
+  const srcX = Math.round((guideX + offsetX) * scaleX);
+  const srcY = Math.round((guideY + offsetY) * scaleY);
+  const srcW = Math.round(guideRect.width  * scaleX);
+  const srcH = Math.round(guideRect.height * scaleY);
+
+  // Output canvas = guide size (passport aspect ratio 1.42:1)
+  const outW = Math.min(srcW, vw);
+  const outH = Math.min(srcH, vh);
+  canvas.width  = outW;
+  canvas.height = outH;
+
+  // Draw only the cropped guide region
+  ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+
+  const dataURL = canvas.toDataURL('image/jpeg', 0.95);
 
   // Camera flash
   flashCapture();
