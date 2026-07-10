@@ -1,114 +1,366 @@
 /**
- * VisaPortal — Passport Scanner & OCR Engine
+ * ============================================================
+ * Passport Verification — e-KYC Scanner Engine
+ * ============================================================
+ *
+ * State Machine:
+ *   IDLE → FRONT_SCAN → TRANSITION → BACK_SCAN → SUCCESS
+ *
  * Features:
- *  - Real-time camera scanner with frame overlay
- *  - White rounded border frame + dark mask
- *  - Circular crosshair target guide
- *  - Instruction banner: "Fit the document into the frame"
- *  - Auto-detection via edge analysis (brightness variance)
- *  - MRZ parsing (ICAO 9303 Type P)
- *  - Form auto-fill with animation
- *  - Manual capture fallback
- *  - Image upload + OCR fallback
- *  - QR progress stepper
- *  - Torch + camera flip support
+ *  - Canvas-based real-time frame analysis (brightness, edges, glare)
+ *  - 9 contextual guidance instructions mapped to detection states
+ *  - Animated guide border: white → pulse → green (#00C853)
+ *  - Auto-capture after sustained 920ms high-confidence hold
+ *  - Front → transition card → back scan → success screen
+ *  - Canvas QR code generator with proper finder patterns
+ *  - QR countdown timer
+ *  - Torch / flashlight toggle
+ * ============================================================
  */
 
 'use strict';
 
-/* ================================================================
+/* ============================================================
    CONSTANTS
-   ================================================================ */
-const DETECTION_THRESHOLD = 0.62;   // confidence required to auto-capture
-const DETECTION_HOLD_MS   = 900;    // hold duration before capture fires
-const SCAN_INTERVAL_MS    = 200;    // analysis frame rate
-const MRZ_SAMPLE_ROWS     = 2;      // 2-line MRZ for type P passports
+   ============================================================ */
+const CONF_THRESHOLD   = 0.60;   // confidence to enter "almost" state
+const CONF_CAPTURE     = 0.82;   // confidence to trigger auto-capture
+const HOLD_DURATION_MS = 920;    // ms held at capture confidence before snap
+const ANALYSIS_RATE_MS = 180;    // frame analysis interval
+const QR_EXPIRE_SECS   = 300;    // 5 minutes
 
-/* ================================================================
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  phase:          'IDLE',       // IDLE | FRONT_SCAN | TRANSITION | BACK_SCAN | SUCCESS
+  stream:         null,
+  facingMode:     'environment',
+  torchOn:        false,
+  scanning:       false,
+  rafId:          null,
+  lastAnalysis:   0,
+  confidence:     0,
+  holdStart:      null,
+  captured:       false,
+  capturedFront:  null,
+  capturedBack:   null,
+  prevEdgeMap:    null,         // for motion/steadiness detection
+  qrTimerId:      null,
+  qrSecsLeft:     QR_EXPIRE_SECS,
+};
+
+/* ============================================================
    DOM REFS
-   ================================================================ */
+   ============================================================ */
 const $ = id => document.getElementById(id);
 
-const el = {
-  overlay:          $('scannerOverlay'),
-  video:            $('cameraVideo'),
-  canvas:           $('captureCanvas'),
-  startBtn:         $('startCameraBtn'),
-  closeBtn:         $('closeScannerBtn'),
-  captureBtn:       $('manualCaptureBtn'),
-  torchBtn:         $('torchBtn'),
-  flipBtn:          $('flipCameraBtn'),
-  scanFrame:        $('scanFrame'),
-  scanLine:         $('scanLine'),
-  instructionText:  $('instructionText'),
-  statusDot:        $('statusDot'),
-  statusLabel:      $('statusLabel'),
-  progressBar:      $('detectProgressBar'),
-  progressFill:     $('detectProgressFill'),
-  processingModal:  $('processingModal'),
-  processingDesc:   $('processingDesc'),
-  ocrResult:        $('ocrResult'),
-  capturedImg:      $('capturedImage'),
-  mrzOverlay:       $('mrzOverlay'),
-  successToast:     $('successToast'),
-  toastClose:       $('toastCloseBtn'),
-  rescanBtn:        $('rescanBtn'),
-  browseBtn:        $('browseBtn'),
-  fileInput:        $('fileInput'),
-  dropzone:         $('dropzone'),
+const dom = {
+  /* Desktop */
+  desktopView:      $('desktopView'),
+  openScannerBtn:   $('openScannerBtn'),
   qrCanvas:         $('qrCanvas'),
+  qrCountdown:      $('qrCountdown'),
+
+  /* Mobile view */
+  mobileView:       $('mobileView'),
+  camVideo:         $('camVideo'),
+  camCanvas:        $('camCanvas'),
+  mobTopbar:        null, // not individually referenced
+
+  /* Mobile step UI */
+  mobStep1:         $('mobStep1'),
+  mobStep2:         $('mobStep2'),
+  mobConnector:     $('mobConnector'),
+  closeMobileBtn:   $('closeMobileBtn'),
+
+  /* Instruction */
+  mobInstruction:   $('mobInstruction'),
+  mobInstrIcon:     $('mobInstrIcon'),
+  mobInstrText:     $('mobInstrText'),
+
+  /* Guide */
+  scanGuide:        $('scanGuide'),
+
+  /* Side label */
+  mobSideLabel:     $('mobSideLabel'),
+  mobSideBadge:     $('mobSideBadge'),
+  mobSideDesc:      $('mobSideDesc'),
+
+  /* Status */
+  mobStatusDot:     $('mobStatusDot'),
+  mobStatusText:    $('mobStatusText'),
+  mobDetectBarWrap: $('mobDetectBarWrap'),
+  mobDetectFill:    $('mobDetectFill'),
+
+  /* Torch */
+  torchBtn:         $('torchBtn'),
+
+  /* Transition */
+  transitionOverlay: $('transitionOverlay'),
+  transContinueBtn:  $('transContinueBtn'),
+
+  /* Success */
+  successScreen:    $('successScreen'),
+  thumbFrontImg:    $('thumbFrontImg'),
+  thumbBackImg:     $('thumbBackImg'),
+  successContinueBtn: $('successContinueBtn'),
 };
 
-/* ================================================================
-   STATE
-   ================================================================ */
-let state = {
-  stream:           null,
-  facingMode:       'environment',
-  torchOn:          false,
-  scanning:         false,
-  scanTimer:        null,
-  detectProgress:   0,
-  detectHoldTimer:  null,
-  holdStart:        null,
-  animationId:      null,
-  lastFrameTime:    0,
-  passportDetected: false,
-  captured:         false,
+/* ============================================================
+   INSTRUCTION DEFINITIONS
+   Each instruction maps to a contextual state
+   ============================================================ */
+const INSTRUCTIONS = {
+  fit_frame: {
+    text: 'Fit the passport inside the frame.',
+    icon: iconPassport(),
+  },
+  move_closer: {
+    text: 'Move closer.',
+    icon: iconZoomIn(),
+  },
+  move_farther: {
+    text: 'Move farther away.',
+    icon: iconZoomOut(),
+  },
+  hold_steady: {
+    text: 'Hold your phone steady.',
+    icon: iconSteady(),
+  },
+  brighter: {
+    text: 'Move to a brighter place.',
+    icon: iconSun(),
+  },
+  reduce_glare: {
+    text: 'Reduce glare by tilting the passport slightly.',
+    icon: iconGlare(),
+  },
+  edges_only: {
+    text: 'Hold the passport from the edges only.',
+    icon: iconHands(),
+  },
+  align: {
+    text: 'Align the passport straight.',
+    icon: iconAlign(),
+  },
+  tap_focus: {
+    text: 'Tap to focus.',
+    icon: iconFocus(),
+  },
+  hold_almost: {
+    text: 'Hold steady…',
+    icon: iconSteady(),
+  },
+  detected: {
+    text: 'Passport detected successfully',
+    icon: iconCheck(),
+  },
+  capturing: {
+    text: 'Capturing…',
+    icon: iconCheck(),
+  },
 };
 
-/* ================================================================
-   TAB SWITCHING
-   ================================================================ */
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+/* ============================================================
+   SVG ICON HELPERS
+   ============================================================ */
+function makeSVG(path, w = 15, h = 15) {
+  return `<svg width="${w}" height="${h}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+}
 
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-    const mode = btn.dataset.mode;
-    $(`panel-${mode}`).classList.add('active');
+function iconPassport()  { return makeSVG('<rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="9" r="3"/>'); }
+function iconZoomIn()    { return makeSVG('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>'); }
+function iconZoomOut()   { return makeSVG('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>'); }
+function iconSteady()    { return makeSVG('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'); }
+function iconSun()       { return makeSVG('<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'); }
+function iconGlare()     { return makeSVG('<path d="M12 3v1m0 16v1M3 12h1m16 0h1M5.6 5.6l.7.7m11.4 11.4.7.7M18.4 5.6l-.7.7M6.3 17.3l-.7.7"/><circle cx="12" cy="12" r="4"/>'); }
+function iconHands()     { return makeSVG('<path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>'); }
+function iconAlign()     { return makeSVG('<line x1="3" y1="12" x2="21" y2="12"/><polyline points="8,7 3,12 8,17"/><polyline points="16,7 21,12 16,17"/>'); }
+function iconFocus()     { return makeSVG('<circle cx="12" cy="12" r="3"/><path d="M3 9V6a3 3 0 0 1 3-3h3M21 9V6a3 3 0 0 0-3-3h-3M3 15v3a3 3 0 0 0 3 3h3M21 15v3a3 3 0 0 1-3 3h-3"/>'); }
+function iconCheck()     { return makeSVG('<polyline points="20,6 9,17 4,12"/>'); }
 
-    if (mode === 'qr') drawQRCode();
+/* ============================================================
+   INIT
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  drawQRCode();
+  startQRCountdown();
+  dom.openScannerBtn.addEventListener('click', openMobileScanner);
+  dom.closeMobileBtn.addEventListener('click', closeMobileScanner);
+  dom.torchBtn.addEventListener('click', toggleTorch);
+  dom.transContinueBtn.addEventListener('click', startBackScan);
+  dom.successContinueBtn.addEventListener('click', () => {
+    // In a real app this navigates to next step
+    dom.successScreen.style.display = 'none';
+    dom.desktopView.style.display = 'flex';
+    // Update desktop stepper to step 3 complete
+    completeDeskStep3();
   });
 });
 
-/* ================================================================
-   START CAMERA SCANNER
-   ================================================================ */
-el.startBtn.addEventListener('click', openScanner);
+/* ============================================================
+   QR CODE — Canvas generator with proper finder patterns
+   ============================================================ */
+function drawQRCode() {
+  const canvas = dom.qrCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const SIZE = 190;
+  const CELLS = 25;
+  const cell = SIZE / CELLS;
 
-async function openScanner() {
-  el.overlay.style.display = 'flex';
+  // White background
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Generate pseudo-random data modules
+  const grid = makeQRGrid(CELLS);
+
+  // Draw data modules
+  ctx.fillStyle = '#0F172A';
+  for (let y = 0; y < CELLS; y++) {
+    for (let x = 0; x < CELLS; x++) {
+      if (grid[y][x]) {
+        const px = Math.round(x * cell);
+        const py = Math.round(y * cell);
+        const cw = Math.round((x + 1) * cell) - px;
+        const ch = Math.round((y + 1) * cell) - py;
+        roundRect(ctx, px, py, cw, ch, 1);
+      }
+    }
+  }
+
+  // Finder patterns (three corners)
+  drawFinder(ctx, 0, 0, cell);
+  drawFinder(ctx, CELLS - 7, 0, cell);
+  drawFinder(ctx, 0, CELLS - 7, cell);
+}
+
+function makeQRGrid(size) {
+  const g = Array.from({ length: size }, () => Array(size).fill(0));
+  // Finder pattern zones (top-left, top-right, bottom-left) — leave them blank for now
+  const inFinder = (x, y) =>
+    (x < 9 && y < 9) ||
+    (x >= size - 8 && y < 9) ||
+    (x < 9 && y >= size - 8);
+
+  // Timing patterns
+  const onTiming = (x, y) => (x === 6 && y >= 8 && y < size - 8) || (y === 6 && x >= 8 && x < size - 8);
+
+  // Use deterministic "random" for consistency
+  let seed = 0x5CA1AB1E;
+  const rand = () => {
+    seed ^= seed << 13;
+    seed ^= seed >> 17;
+    seed ^= seed << 5;
+    return (seed >>> 0) / 0xFFFFFFFF;
+  };
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (inFinder(x, y)) continue;
+      if (onTiming(x, y)) { g[y][x] = (x + y) % 2 === 0 ? 1 : 0; continue; }
+      g[y][x] = rand() > 0.48 ? 1 : 0;
+    }
+  }
+  return g;
+}
+
+function drawFinder(ctx, gx, gy, cell) {
+  const ox = Math.round(gx * cell);
+  const oy = Math.round(gy * cell);
+  const c = cell;
+
+  // Outer 7×7 square
+  ctx.fillStyle = '#0F172A';
+  roundRect(ctx, ox, oy, Math.round(7 * c), Math.round(7 * c), 2);
+
+  // Inner white 5×5
+  ctx.fillStyle = '#FFFFFF';
+  roundRect(ctx, ox + Math.round(c), oy + Math.round(c), Math.round(5 * c), Math.round(5 * c), 1);
+
+  // Center 3×3
+  ctx.fillStyle = '#0F172A';
+  roundRect(ctx, ox + Math.round(2 * c), oy + Math.round(2 * c), Math.round(3 * c), Math.round(3 * c), 1);
+}
+
+function roundRect(ctx, x, y, w, h, r = 2) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* ============================================================
+   QR COUNTDOWN TIMER
+   ============================================================ */
+function startQRCountdown() {
+  state.qrTimerId = setInterval(() => {
+    state.qrSecsLeft = Math.max(0, state.qrSecsLeft - 1);
+    const m = String(Math.floor(state.qrSecsLeft / 60)).padStart(2, '0');
+    const s = String(state.qrSecsLeft % 60).padStart(2, '0');
+    if (dom.qrCountdown) dom.qrCountdown.textContent = `${m}:${s}`;
+    if (state.qrSecsLeft === 0) {
+      clearInterval(state.qrTimerId);
+      // Redraw QR with dim effect (expired)
+      redrawExpiredQR();
+    }
+  }, 1000);
+}
+
+function redrawExpiredQR() {
+  const canvas = dom.qrCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = '600 13px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Expired — Refresh page', canvas.width / 2, canvas.height / 2 - 8);
+  ctx.fillText('to get a new QR code', canvas.width / 2, canvas.height / 2 + 10);
+}
+
+/* ============================================================
+   OPEN / CLOSE MOBILE SCANNER
+   ============================================================ */
+async function openMobileScanner() {
+  dom.desktopView.style.display = 'none';
+  dom.mobileView.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  setStatus('init', 'Initializing camera…');
+
+  state.phase   = 'FRONT_SCAN';
+  state.captured = false;
+
+  setMobSideUI('front');
+  setMobStatus('init', 'Initializing camera…');
+  setInstruction('fit_frame');
+  setGuideState('default');
+
   await startCamera();
 }
 
+function closeMobileScanner() {
+  stopCamera();
+  dom.mobileView.style.display = 'none';
+  dom.desktopView.style.display = 'flex';
+  document.body.style.overflow = '';
+  state.phase = 'IDLE';
+  resetDetectionState();
+}
+
+/* ============================================================
+   CAMERA MANAGEMENT
+   ============================================================ */
 async function startCamera() {
   stopCamera();
 
@@ -117,22 +369,23 @@ async function startCamera() {
       facingMode: state.facingMode,
       width:  { ideal: 1920 },
       height: { ideal: 1080 },
+      focusMode: 'continuous',
     },
     audio: false,
   };
 
   try {
     state.stream = await navigator.mediaDevices.getUserMedia(constraints);
-    el.video.srcObject = state.stream;
-    await el.video.play();
-    setStatus('ready', 'Position your passport in the frame');
+    dom.camVideo.srcObject = state.stream;
+    await dom.camVideo.play();
+    setMobStatus('ready', 'Position your passport in the frame');
     beginDetectionLoop();
   } catch (err) {
-    console.error('Camera error:', err);
     let msg = 'Camera access denied. Please allow camera permission.';
-    if (err.name === 'NotFoundError') msg = 'No camera found on this device.';
-    if (err.name === 'NotAllowedError') msg = 'Camera permission was denied.';
-    setStatus('error', msg);
+    if (err.name === 'NotFoundError') msg = 'No camera detected on this device.';
+    if (err.name === 'NotAllowedError') msg = 'Camera permission denied.';
+    setMobStatus('error', msg);
+    console.warn('Camera error:', err);
   }
 }
 
@@ -141,151 +394,255 @@ function stopCamera() {
     state.stream.getTracks().forEach(t => t.stop());
     state.stream = null;
   }
-  cancelAnimationFrame(state.animationId);
-  clearTimeout(state.detectHoldTimer);
-  state.scanning         = false;
-  state.detectProgress   = 0;
-  state.passportDetected = false;
-  state.captured         = false;
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+  state.scanning = false;
 }
 
-/* ================================================================
-   CLOSE SCANNER
-   ================================================================ */
-el.closeBtn.addEventListener('click', closeScanner);
-
-function closeScanner() {
-  stopCamera();
-  el.overlay.style.display = 'none';
-  document.body.style.overflow = '';
-  resetDetectionUI();
-}
-
-/* ================================================================
-   DETECTION LOOP  (Canvas-based frame brightness analysis)
-   ================================================================ */
+/* ============================================================
+   DETECTION LOOP
+   ============================================================ */
 function beginDetectionLoop() {
   state.scanning = true;
 
-  function loop(timestamp) {
+  const loop = (timestamp) => {
     if (!state.scanning) return;
-    state.animationId = requestAnimationFrame(loop);
+    state.rafId = requestAnimationFrame(loop);
 
-    if (timestamp - state.lastFrameTime < SCAN_INTERVAL_MS) return;
-    state.lastFrameTime = timestamp;
+    if (timestamp - state.lastAnalysis < ANALYSIS_RATE_MS) return;
+    state.lastAnalysis = timestamp;
 
-    if (el.video.readyState < el.video.HAVE_ENOUGH_DATA) return;
-    analyzeFrame();
-  }
+    if (dom.camVideo.readyState < dom.camVideo.HAVE_ENOUGH_DATA) return;
+    analyzeAndUpdate();
+  };
 
-  state.animationId = requestAnimationFrame(loop);
+  state.rafId = requestAnimationFrame(loop);
 }
 
-function analyzeFrame() {
-  const vw = el.video.videoWidth;
-  const vh = el.video.videoHeight;
+/* ============================================================
+   FRAME ANALYSIS
+   Returns analysis object with metrics + overall confidence
+   ============================================================ */
+function analyzeAndUpdate() {
+  if (state.captured) return;
+
+  const video = dom.camVideo;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
   if (!vw || !vh) return;
 
-  const canvas = el.canvas;
-  const ctx = canvas.getContext('2d');
+  // Sample the center region (where the passport should be)
+  const samplePct = 0.72;
+  const sw = Math.round(vw * samplePct);
+  const sh = Math.round(vh * (samplePct * 0.65));
+  const sx = Math.round((vw - sw) / 2);
+  const sy = Math.round((vh - sh) / 2);
 
-  // Sample the region that corresponds to the scan frame (center ~60%)
-  const sampleW = Math.round(vw * 0.6);
-  const sampleH = Math.round(vh * 0.4);
-  const sx = Math.round((vw - sampleW) / 2);
-  const sy = Math.round((vh - sampleH) / 2);
+  const canvas = dom.camCanvas;
+  canvas.width  = sw;
+  canvas.height = sh;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
 
-  canvas.width  = sampleW;
-  canvas.height = sampleH;
-  ctx.drawImage(el.video, sx, sy, sampleW, sampleH, 0, 0, sampleW, sampleH);
+  const imageData = ctx.getImageData(0, 0, sw, sh);
+  const analysis  = computeAnalysis(imageData.data, sw, sh);
 
-  const imageData = ctx.getImageData(0, 0, sampleW, sampleH);
-  const confidence = computeDocumentConfidence(imageData.data, sampleW, sampleH);
-
-  updateDetectionProgress(confidence);
+  updateDetection(analysis);
 }
 
-/**
- * Heuristic: a passport page in frame has:
- * 1. High contrast edges (document border vs background)
- * 2. Relatively uniform inner region (passport background)
- * 3. Some high-brightness area (white paper)
- */
-function computeDocumentConfidence(data, w, h) {
+function computeAnalysis(data, w, h) {
   let brightnessSum = 0;
+  let glareCount    = 0;
   let edgeSum       = 0;
-  const step = 4; // sample every Nth pixel for performance
+  const step = 3;
 
-  // Luminance and edge computation
+  // Luminance map
   const luma = new Float32Array(w * h);
+  const total = w * h;
+
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
-      const l = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const l = 0.299 * r + 0.587 * g + 0.114 * b;
       luma[y * w + x] = l;
       brightnessSum += l;
+      if (l > 230) glareCount++;
     }
   }
 
-  const avgBrightness = brightnessSum / (w * h);
+  const avgBrightness = brightnessSum / total;
+  const glareRatio    = glareCount / total;
 
-  // Sobel-lite edge detection on grid
+  // Sobel edge detection (sampled)
+  let sampledPixels = 0;
+  let motionSum     = 0;
+
   for (let y = 1; y < h - 1; y += step) {
     for (let x = 1; x < w - 1; x += step) {
-      const gx = -luma[(y-1)*w + x-1] + luma[(y-1)*w + x+1]
-               - 2*luma[y*w + x-1]    + 2*luma[y*w + x+1]
-               - luma[(y+1)*w + x-1]  + luma[(y+1)*w + x+1];
-      const gy = -luma[(y-1)*w + x-1] - 2*luma[(y-1)*w + x] - luma[(y-1)*w + x+1]
-               + luma[(y+1)*w + x-1]  + 2*luma[(y+1)*w + x] + luma[(y+1)*w + x+1];
-      edgeSum += Math.sqrt(gx*gx + gy*gy);
+      const gx =
+        -luma[(y-1)*w + x-1] + luma[(y-1)*w + x+1]
+        - 2*luma[y*w + x-1]  + 2*luma[y*w + x+1]
+        - luma[(y+1)*w + x-1]+ luma[(y+1)*w + x+1];
+      const gy =
+        -luma[(y-1)*w + x-1] - 2*luma[(y-1)*w + x] - luma[(y-1)*w + x+1]
+        + luma[(y+1)*w + x-1]+ 2*luma[(y+1)*w + x] + luma[(y+1)*w + x+1];
+      const mag = Math.sqrt(gx*gx + gy*gy);
+      edgeSum += mag;
+
+      // Motion: compare with previous frame
+      if (state.prevEdgeMap) {
+        const pi = (Math.floor(y / step)) * Math.floor(w / step) + Math.floor(x / step);
+        motionSum += Math.abs(mag - (state.prevEdgeMap[pi] || 0));
+      }
+      sampledPixels++;
     }
   }
 
-  const sampledPixels = Math.floor(h / step) * Math.floor(w / step);
-  const avgEdge = edgeSum / sampledPixels;
+  // Build edge map for next frame comparison
+  const edgeMap = new Float32Array(sampledPixels);
+  let ei = 0;
+  for (let y = 1; y < h - 1; y += step) {
+    for (let x = 1; x < w - 1; x += step) {
+      const gx =
+        -luma[(y-1)*w + x-1] + luma[(y-1)*w + x+1]
+        - 2*luma[y*w + x-1]  + 2*luma[y*w + x+1]
+        - luma[(y+1)*w + x-1]+ luma[(y+1)*w + x+1];
+      const gy =
+        -luma[(y-1)*w + x-1] - 2*luma[(y-1)*w + x] - luma[(y-1)*w + x+1]
+        + luma[(y+1)*w + x-1]+ 2*luma[(y+1)*w + x] + luma[(y+1)*w + x+1];
+      edgeMap[ei++] = Math.sqrt(gx*gx + gy*gy);
+    }
+  }
+  state.prevEdgeMap = edgeMap;
 
-  // Normalize signals
-  const brightScore = Math.min(1, avgBrightness / 180);       // passport is bright/white
-  const edgeScore   = Math.min(1, avgEdge / 35);              // edges from doc border + text
-  const balance     = 1 - Math.abs(brightScore - 0.68) * 1.5; // ideal brightness ~68%
+  const avgEdge   = edgeSum / sampledPixels;
+  const avgMotion = state.prevEdgeMap ? motionSum / sampledPixels : 0;
 
-  const confidence = Math.max(0, Math.min(1,
-    brightScore * 0.35 + edgeScore * 0.45 + balance * 0.2
+  // Steadiness: low motion = steady (score 0–1, 1 = very steady)
+  const steadiness = Math.max(0, 1 - Math.min(1, avgMotion / 25));
+
+  // Fill ratio: how well a bright rectangular area fills the sample
+  let brightArea = 0;
+  for (let i = 0; i < total; i++) {
+    if (luma[i] > 140) brightArea++;
+  }
+  const fillRatio = brightArea / total;
+
+  // Scores
+  const brightScore  = Math.min(1, avgBrightness / 165);       // 0-1 (passport is white/bright)
+  const edgeScore    = Math.min(1, avgEdge / 40);              // 0-1 (text/borders = edges)
+  const balanceScore = Math.max(0, 1 - Math.abs(brightScore - 0.72) * 2.0);
+  const glareScore   = Math.max(0, 1 - glareRatio * 6);        // penalize overexposure
+  const fillScore    = fillRatio > 0.25 && fillRatio < 0.85    // reasonable fill
+    ? 1 - Math.abs(fillRatio - 0.55) * 1.5
+    : 0.15;
+
+  // Overall confidence
+  const raw = Math.max(0, Math.min(1,
+    brightScore  * 0.28 +
+    edgeScore    * 0.30 +
+    balanceScore * 0.18 +
+    glareScore   * 0.12 +
+    fillScore    * 0.12
   ));
 
-  return confidence;
+  // Smooth confidence
+  state.confidence = state.confidence * 0.72 + raw * 0.28;
+
+  return {
+    brightness: avgBrightness / 255,
+    edgeDensity: avgEdge / 50,
+    steadiness,
+    glareRatio,
+    fillRatio,
+    confidence: state.confidence,
+  };
 }
 
-/* ================================================================
-   UPDATE DETECTION STATE
-   ================================================================ */
-function updateDetectionProgress(confidence) {
-  const prev = state.detectProgress;
+/* ============================================================
+   CONTEXTUAL INSTRUCTION SELECTION
+   Picks the most relevant guidance based on analysis metrics
+   ============================================================ */
+function selectInstruction(a) {
+  const { confidence, brightness, edgeDensity, steadiness, glareRatio, fillRatio } = a;
 
-  if (confidence >= DETECTION_THRESHOLD) {
-    // Ramp up
-    state.detectProgress = Math.min(1, state.detectProgress + 0.06);
-    if (!state.passportDetected && state.detectProgress > 0.5) {
-      state.passportDetected = true;
-      setDetectedUI();
-    }
-  } else {
-    // Ramp down
-    state.detectProgress = Math.max(0, state.detectProgress - 0.04);
-    if (state.passportDetected && state.detectProgress < 0.3) {
-      state.passportDetected = false;
-      resetDetectionUI();
-    }
+  // High priority: critical issues
+  if (confidence < 0.18) return 'fit_frame';
+
+  // Distance issues
+  if (fillRatio < 0.22) return 'move_closer';
+  if (fillRatio > 0.82) return 'move_farther';
+
+  // Lighting issues
+  if (brightness < 0.30) return 'brighter';
+
+  // Glare
+  if (glareRatio > 0.12) return 'reduce_glare';
+
+  // Steadiness
+  if (steadiness < 0.45) return 'hold_steady';
+
+  // Fingers / low-edge content in bright area (inferred)
+  if (edgeDensity > 0.70 && confidence < 0.50) return 'edges_only';
+
+  // Alignment (aspect-ratio proxy: moderate fill, moderate confidence)
+  if (fillRatio > 0.28 && fillRatio < 0.50 && confidence < 0.55) return 'align';
+
+  // Focus (low edges despite decent brightness)
+  if (brightness > 0.55 && edgeDensity < 0.25 && confidence < 0.65) return 'tap_focus';
+
+  // Near success
+  if (confidence >= CONF_THRESHOLD && confidence < CONF_CAPTURE) return 'hold_almost';
+
+  // Full success
+  if (confidence >= CONF_CAPTURE) return 'detected';
+
+  return 'fit_frame';
+}
+
+/* ============================================================
+   UPDATE DETECTION STATE — main control loop
+   ============================================================ */
+function updateDetection(analysis) {
+  if (state.captured) return;
+
+  const conf     = analysis.confidence;
+  const instrKey = selectInstruction(analysis);
+
+  // Update confidence bar
+  dom.mobDetectFill.style.width = `${Math.round(conf * 100)}%`;
+  dom.mobDetectFill.setAttribute('aria-valuenow', Math.round(conf * 100));
+
+  if (conf > 0.15) {
+    dom.mobDetectBarWrap.classList.add('visible');
   }
 
-  // Update progress bar
-  el.progressFill.style.width = `${state.detectProgress * 100}%`;
+  // Guide border state
+  if (conf >= CONF_CAPTURE) {
+    setGuideState('success');
+    setMobStatus('success', 'Passport detected');
+    dom.mobDetectFill.classList.add('fill-success');
+  } else if (conf >= CONF_THRESHOLD) {
+    setGuideState('almost');
+    setMobStatus('almost', 'Almost ready…');
+    dom.mobDetectFill.classList.remove('fill-success');
+  } else {
+    setGuideState('default');
+    setMobStatus('detecting', 'Detecting…');
+    dom.mobDetectFill.classList.remove('fill-success');
+  }
 
-  // Auto-capture when held at 100%
-  if (state.detectProgress >= 0.99 && !state.captured) {
+  // Set instruction text
+  setInstruction(instrKey);
+
+  // Auto-capture logic
+  if (conf >= CONF_CAPTURE && !state.captured) {
     if (!state.holdStart) {
       state.holdStart = Date.now();
-    } else if (Date.now() - state.holdStart >= DETECTION_HOLD_MS) {
+    } else if (Date.now() - state.holdStart >= HOLD_DURATION_MS) {
       triggerCapture();
     }
   } else {
@@ -293,584 +650,269 @@ function updateDetectionProgress(confidence) {
   }
 }
 
-function setDetectedUI() {
-  el.scanFrame.classList.add('detected');
-  el.progressBar.style.display = 'block';
-  setStatus('detected', 'Passport detected — hold steady…');
-  el.instructionText.textContent = 'Hold steady — capturing…';
+/* ============================================================
+   GUIDE STATE
+   ============================================================ */
+function setGuideState(st) { // 'default' | 'almost' | 'success'
+  const guide = dom.scanGuide;
+  guide.classList.remove('state-almost', 'state-success');
+  if (st === 'almost') guide.classList.add('state-almost');
+  if (st === 'success') guide.classList.add('state-success');
+
+  // Mirror state on instruction pill
+  const pill = dom.mobInstruction;
+  pill.classList.remove('state-almost', 'state-success');
+  if (st === 'almost') pill.classList.add('state-almost');
+  if (st === 'success') pill.classList.add('state-success');
 }
 
-function resetDetectionUI() {
-  el.scanFrame.classList.remove('detected');
-  el.progressBar.style.display = 'none';
-  el.progressFill.style.width = '0%';
-  setStatus('ready', 'Position your passport in the frame');
-  el.instructionText.textContent = 'Fit the document into the frame';
+function resetDetectionState() {
+  state.confidence = 0;
+  state.holdStart  = null;
+  state.captured   = false;
+  state.prevEdgeMap= null;
+  setGuideState('default');
+  setMobStatus('init', 'Initializing…');
+  setInstruction('fit_frame');
+  dom.mobDetectFill.style.width = '0%';
+  dom.mobDetectBarWrap.classList.remove('visible');
+  dom.mobDetectFill.classList.remove('fill-success');
 }
 
-function setStatus(type, label) {
-  el.statusDot.className = 'status-dot';
-  if (type === 'ready')    el.statusDot.classList.add('ready');
-  if (type === 'scanning') el.statusDot.classList.add('scanning');
-  if (type === 'detected') el.statusDot.classList.add('detected');
-  el.statusLabel.textContent = label;
+/* ============================================================
+   INSTRUCTION DISPLAY
+   ============================================================ */
+function setInstruction(key) {
+  const instr = INSTRUCTIONS[key] || INSTRUCTIONS['fit_frame'];
+  const currentText = dom.mobInstrText.textContent;
+  if (currentText === instr.text) return; // avoid unnecessary DOM thrash
+
+  dom.mobInstrText.textContent = instr.text;
+  dom.mobInstrIcon.innerHTML   = instr.icon;
 }
 
-/* ================================================================
-   CAPTURE
-   ================================================================ */
-el.captureBtn.addEventListener('click', () => triggerCapture(true));
+/* ============================================================
+   MOBILE STATUS
+   ============================================================ */
+function setMobStatus(type, label) {
+  dom.mobStatusDot.className = 'mob-status-dot';
+  if (type === 'init')      dom.mobStatusDot.classList.add('dot-ready');
+  if (type === 'ready')     dom.mobStatusDot.classList.add('dot-ready');
+  if (type === 'detecting') dom.mobStatusDot.classList.add('dot-detecting');
+  if (type === 'almost')    dom.mobStatusDot.classList.add('dot-almost');
+  if (type === 'success')   dom.mobStatusDot.classList.add('dot-success');
+  if (type === 'error')     dom.mobStatusDot.classList.add('dot-detecting'); // amber for error
+  if (dom.mobStatusText.textContent !== label) {
+    dom.mobStatusText.textContent = label;
+  }
+}
 
-async function triggerCapture(manual = false) {
+/* ============================================================
+   SIDE LABEL UI
+   ============================================================ */
+function setMobSideUI(side) {
+  if (side === 'front') {
+    dom.mobSideBadge.textContent = 'FRONT';
+    dom.mobSideBadge.className   = 'mob-side-badge';
+    dom.mobSideDesc.textContent  = 'Place the passport front page completely inside the frame. Ensure all four corners are visible.';
+    // Step indicator
+    dom.mobStep1.classList.add('mob-step--active');
+    dom.mobStep2.classList.remove('mob-step--active', 'mob-step--done');
+  } else {
+    dom.mobSideBadge.textContent = 'BACK';
+    dom.mobSideBadge.className   = 'mob-side-badge badge-back';
+    dom.mobSideDesc.textContent  = 'Turn the passport over and place the back page completely inside the frame.';
+    // Step indicator
+    dom.mobStep1.classList.remove('mob-step--active');
+    dom.mobStep1.classList.add('mob-step--done');
+    dom.mobConnector.classList.add('mob-connector--done');
+    dom.mobStep2.classList.add('mob-step--active');
+  }
+}
+
+/* ============================================================
+   AUTO CAPTURE
+   ============================================================ */
+async function triggerCapture() {
   if (state.captured) return;
   state.captured = true;
-  state.scanning = false;
 
-  // Snap frame from video
-  const vw = el.video.videoWidth  || 1280;
-  const vh = el.video.videoHeight || 720;
+  // Update instruction
+  setInstruction('capturing');
 
-  const canvas = el.canvas;
+  // Short pause for "Capturing..." display
+  await sleep(350);
+
+  // Capture frame from video
+  const video = dom.camVideo;
+  const vw = video.videoWidth  || 1280;
+  const vh = video.videoHeight || 720;
+  const canvas = dom.camCanvas;
   canvas.width  = vw;
   canvas.height = vh;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(el.video, 0, 0, vw, vh);
+  ctx.drawImage(video, 0, 0, vw, vh);
 
-  const imageDataURL = canvas.toDataURL('image/jpeg', 0.92);
+  const dataURL = canvas.toDataURL('image/jpeg', 0.93);
 
-  // Visual feedback — flash
+  // Camera flash
   flashCapture();
 
-  // Small delay for UX
-  await sleep(400);
-  closeScanner();
+  await sleep(280);
 
-  // Show processing
-  showProcessingModal();
-
-  // Run OCR pipeline
-  const result = await runOCR(imageDataURL, canvas, ctx, vw, vh);
-  hideProcessingModal();
-  displayResult(imageDataURL, result);
+  if (state.phase === 'FRONT_SCAN') {
+    state.capturedFront = dataURL;
+    state.phase = 'TRANSITION';
+    showTransitionOverlay();
+  } else if (state.phase === 'BACK_SCAN') {
+    state.capturedBack = dataURL;
+    state.phase = 'SUCCESS';
+    stopCamera();
+    dom.mobileView.style.display = 'none';
+    showSuccessScreen();
+  }
 }
 
+/* ============================================================
+   CAPTURE FLASH
+   ============================================================ */
 function flashCapture() {
   const flash = document.createElement('div');
-  flash.style.cssText = `
-    position:fixed;inset:0;z-index:9999;background:#fff;
-    opacity:0.85;pointer-events:none;
-    animation:flash-out 0.35s ease forwards;
-  `;
-  const style = document.createElement('style');
-  style.textContent = '@keyframes flash-out{from{opacity:0.85}to{opacity:0}}';
-  document.head.appendChild(style);
+  flash.className = 'capture-flash';
   document.body.appendChild(flash);
-  setTimeout(() => { flash.remove(); style.remove(); }, 400);
+  setTimeout(() => flash.remove(), 520);
 }
 
-/* ================================================================
-   OCR / MRZ PARSING
-   ================================================================ */
-async function runOCR(imageDataURL, canvas, ctx, vw, vh) {
-  // Step through processing UI
-  await animateProcessingSteps();
+/* ============================================================
+   TRANSITION OVERLAY (Front → Back)
+   ============================================================ */
+function showTransitionOverlay() {
+  stopCamera();
+  dom.transitionOverlay.style.display = 'flex';
+  dom.mobileView.style.display = 'none';
+}
 
-  // Extract MRZ region (bottom ~15% of image = MRZ band)
-  const mrzH  = Math.round(vh * 0.15);
-  const mrzY  = vh - mrzH - 10;
+async function startBackScan() {
+  dom.transitionOverlay.style.display = 'none';
+  dom.mobileView.style.display = 'flex';
 
-  // Get pixel data from MRZ region
-  const mrzData = ctx.getImageData(0, mrzY, vw, mrzH);
+  state.phase    = 'BACK_SCAN';
+  state.captured = false;
+  resetDetectionState();
+  setMobSideUI('back');
 
-  // Try to parse MRZ from pixel pattern + brightness analysis
-  const mrz = extractMRZFromPixels(mrzData, vw, mrzH);
+  await startCamera();
+}
 
-  if (mrz) {
-    return parseMRZ(mrz.line1, mrz.line2);
+/* ============================================================
+   SUCCESS SCREEN
+   ============================================================ */
+function showSuccessScreen() {
+  // Populate thumbnails
+  if (state.capturedFront) {
+    dom.thumbFrontImg.src = state.capturedFront;
   }
-
-  // Fallback: return demo data (as if OCR succeeded)
-  return generateDemoData();
-}
-
-/**
- * Simplified MRZ extraction:
- * Scans horizontal rows for dense character-like patterns (high frequency edges)
- * Returns the two rows with most edge density (= MRZ lines)
- */
-function extractMRZFromPixels(imageData, w, h) {
-  const data = imageData.data;
-  const rowDensity = [];
-
-  for (let y = 0; y < h; y++) {
-    let transitions = 0;
-    let prevLum = null;
-    for (let x = 0; x < w; x += 3) {
-      const i = (y * w + x) * 4;
-      const lum = Math.round(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]);
-      if (prevLum !== null && Math.abs(lum - prevLum) > 30) transitions++;
-      prevLum = lum;
-    }
-    rowDensity.push(transitions);
-  }
-
-  // Find rows with highest transition density
-  const sorted = [...rowDensity].sort((a,b) => b-a);
-  const threshold = sorted[Math.floor(h * 0.1)] || 20;
-
-  const denseRows = rowDensity
-    .map((d, i) => ({ d, i }))
-    .filter(r => r.d >= threshold)
-    .map(r => r.i);
-
-  if (denseRows.length < 2) return null;
-
-  // Cluster rows into two MRZ lines
-  const mid = denseRows[Math.floor(denseRows.length / 2)];
-  const line1Rows = denseRows.filter(r => r < mid);
-  const line2Rows = denseRows.filter(r => r >= mid);
-
-  if (!line1Rows.length || !line2Rows.length) return null;
-
-  return {
-    line1: 'P<INDRAWAT<<JOHN<<MARK<<<<<<<<<<<<<<<<<<<<<',
-    line2: 'A1234567<8IND8501151M2812317<<<<<<<<<<<<<<<6',
-  };
-}
-
-/**
- * ICAO 9303 MRZ Parser — Type P (Passport)
- */
-function parseMRZ(line1, line2) {
-  if (!line1 || !line2 || line1.length < 44 || line2.length < 44) return null;
-
-  const docType      = line1.substring(0, 1);
-  const country      = line1.substring(2, 5).replace(/</g, '');
-  const namePart     = line1.substring(5, 44);
-  const nameSplit    = namePart.split('<<');
-  const surname      = (nameSplit[0] || '').replace(/</g, ' ').trim();
-  const givenNames   = (nameSplit.slice(1).join(' ') || '').replace(/</g, ' ').trim();
-
-  const passportNum  = line2.substring(0, 9).replace(/</g, '');
-  const nationality  = line2.substring(10, 13).replace(/</g, '');
-  const dobRaw       = line2.substring(13, 19);
-  const sex          = line2.substring(20, 21);
-  const expiryRaw    = line2.substring(21, 27);
-
-  const dob    = mrzDateToISO(dobRaw);
-  const expiry = mrzDateToISO(expiryRaw, true);
-
-  return { surname, givenNames, nationality: countryCode(nationality || country), passportNum, dob, expiry, sex, line1, line2 };
-}
-
-function mrzDateToISO(raw, isExpiry = false) {
-  if (!raw || raw.length < 6) return '';
-  const yy = parseInt(raw.substring(0,2), 10);
-  const mm = String(parseInt(raw.substring(2,4), 10)).padStart(2, '0');
-  const dd = String(parseInt(raw.substring(4,6), 10)).padStart(2, '0');
-  const currentYear = new Date().getFullYear() % 100;
-  let year;
-  if (isExpiry) {
-    year = yy < currentYear ? 2100 + yy : 2000 + yy;
+  if (state.capturedBack) {
+    dom.thumbBackImg.src = state.capturedBack;
   } else {
-    year = yy > currentYear ? 1900 + yy : 2000 + yy;
+    // Hide back thumb if not captured
+    const backThumb = dom.thumbBackImg.closest?.('.success-thumb');
+    if (backThumb) backThumb.style.display = 'none';
   }
-  return `${year}-${mm}-${dd}`;
+
+  dom.successScreen.style.display = 'flex';
+  document.body.style.overflow = '';
+
+  // Trigger SVG animation (re-trigger by cloning)
+  const ring = dom.successScreen.querySelector('.success-ring');
+  const tick = dom.successScreen.querySelector('.success-tick');
+  if (ring && tick) {
+    // Force reflow to restart CSS animation
+    ring.style.animation = 'none';
+    tick.style.animation = 'none';
+    void ring.offsetWidth; // reflow
+    ring.style.animation = '';
+    tick.style.animation = '';
+  }
 }
 
-function countryCode(code) {
-  const map = {
-    IND:'India', USA:'United States', GBR:'United Kingdom', CAN:'Canada',
-    AUS:'Australia', DEU:'Germany', FRA:'France', CHN:'China', JPN:'Japan',
-    ZAF:'South Africa', BRA:'Brazil', MEX:'Mexico', ITA:'Italy', ESP:'Spain',
-    NLD:'Netherlands', SGP:'Singapore', ARE:'United Arab Emirates',
-  };
-  return map[code] || code;
-}
-
-/**
- * Demo passport data (shown as fallback when real OCR is unavailable)
- */
-function generateDemoData() {
-  return {
-    surname:     'BOPPANA',
-    givenNames:  'SRUJAN',
-    nationality: 'India',
-    passportNum: 'Y9634514',
-    dob:         '1994-10-29',
-    expiry:      '2033-09-17',
-    sex:         'M',
-    line1:       'P<INDBOPPANA<<SRUJAN<<<<<<<<<<<<<<<<<<<<<<<<',
-    line2:       'Y9634514<8IND9410291M3309177<<<<<<<<<<<<<<<2',
-  };
-}
-
-/* ================================================================
-   PROCESSING STEPS ANIMATION
-   ================================================================ */
-async function animateProcessingSteps() {
-  const steps = [1, 2, 3, 4];
-  for (const n of steps) {
-    const prev = $(`procStep${n-1}`);
-    const curr = $(`procStep${n}`);
-    if (prev && n > 1) {
-      prev.classList.remove('active');
-      prev.classList.add('done');
+function completeDeskStep3() {
+  const step3 = $('dskStep3');
+  if (step3) {
+    step3.className = 'dsk-step dsk-step--done';
+    const circle = step3.querySelector('.dsk-step-circle');
+    if (circle) {
+      circle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>`;
     }
-    if (curr) {
-      curr.classList.add('active');
-    }
-    await sleep(550);
+    const label = step3.querySelector('.dsk-step-label');
+    if (label) label.style.color = '#059669';
+    const line2 = document.querySelector('.dsk-step-connector:last-of-type');
+    if (line2) line2.classList.add('dsk-step-connector--done');
   }
 }
 
-/* ================================================================
-   DISPLAY RESULTS
-   ================================================================ */
-function displayResult(imageDataURL, data) {
-  // Show captured image
-  el.capturedImg.src = imageDataURL;
-  el.ocrResult.style.display = 'block';
-
-  // Show MRZ in overlay
-  if (data && data.line1) {
-    el.mrzOverlay.textContent = data.line1 + '\n' + data.line2;
-  }
-
-  if (!data) {
-    showToast('error', 'Could not read passport data. Please try again or enter manually.');
-    return;
-  }
-
-  // Auto-fill form with delay cascade
-  const fields = [
-    { id: 'surname',     value: data.surname,     delay: 200  },
-    { id: 'given',       value: data.givenNames,  delay: 400  },
-    { id: 'nationality', value: data.nationality, delay: 600  },
-    { id: 'dob',         value: data.dob,         delay: 800  },
-    { id: 'passport',    value: data.passportNum, delay: 1000 },
-    { id: 'sex',         value: data.sex,         delay: 1200 },
-    { id: 'expiry',      value: data.expiry,      delay: 1400 },
-    { id: 'mrz1',        value: data.line1,       delay: 1600 },
-    { id: 'mrz2',        value: data.line2,       delay: 1700 },
-  ];
-
-  fields.forEach(({ id, value, delay }) => {
-    if (!value) return;
-    setTimeout(() => {
-      const input   = $(id);
-      const badge   = $(`badge-${id}`);
-      if (!input) return;
-      animateTyping(input, String(value));
-      input.classList.add('autofilled');
-      if (badge) badge.style.display = 'flex';
-    }, delay);
-  });
-
-  // Show success toast after fields are filled
-  setTimeout(() => showSuccessToast(), 1900);
-
-  // Scroll to form
-  setTimeout(() => {
-    document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 500);
-}
-
-function animateTyping(input, value) {
-  // For select elements
-  if (input.tagName === 'SELECT') {
-    input.value = value;
-    input.dispatchEvent(new Event('change'));
-    return;
-  }
-  // Typing animation
-  input.value = '';
-  let i = 0;
-  const interval = setInterval(() => {
-    if (i < value.length) {
-      input.value += value[i++];
-    } else {
-      clearInterval(interval);
-      input.dispatchEvent(new Event('input'));
-    }
-  }, value.length > 20 ? 18 : 35);
-}
-
-/* ================================================================
-   PROCESSING MODAL
-   ================================================================ */
-function showProcessingModal() {
-  // Reset steps
-  [1,2,3,4].forEach(n => {
-    const s = $(`procStep${n}`);
-    if (s) { s.className = 'proc-step'; }
-  });
-  $('procStep1')?.classList.add('active');
-  el.processingModal.style.display = 'flex';
-}
-
-function hideProcessingModal() {
-  el.processingModal.style.display = 'none';
-}
-
-/* ================================================================
-   TOAST
-   ================================================================ */
-function showSuccessToast() {
-  el.successToast.style.display = 'flex';
-  setTimeout(() => {
-    el.successToast.style.animation = 'toast-out 0.4s ease forwards';
-    const style = document.createElement('style');
-    style.textContent = '@keyframes toast-out{to{transform:translateY(20px);opacity:0}}';
-    document.head.appendChild(style);
-    setTimeout(() => {
-      el.successToast.style.display = 'none';
-      el.successToast.style.animation = '';
-      style.remove();
-    }, 420);
-  }, 5000);
-}
-
-el.toastClose.addEventListener('click', () => {
-  el.successToast.style.display = 'none';
-});
-
-/* ================================================================
-   TORCH
-   ================================================================ */
-el.torchBtn.addEventListener('click', async () => {
+/* ============================================================
+   TORCH TOGGLE
+   ============================================================ */
+async function toggleTorch() {
   if (!state.stream) return;
   const track = state.stream.getVideoTracks()[0];
-  if (!track || !track.getCapabilities) return;
-  const caps = track.getCapabilities();
-  if (!caps.torch) {
-    showToast('error', 'Torch not supported on this device');
+  if (!track) return;
+
+  const caps = track.getCapabilities?.();
+  if (caps && !caps.torch) {
+    console.info('Torch not supported on this device/browser');
     return;
   }
+
   state.torchOn = !state.torchOn;
-  await track.applyConstraints({ advanced: [{ torch: state.torchOn }] }).catch(() => {});
-  el.torchBtn.classList.toggle('active', state.torchOn);
-});
 
-/* ================================================================
-   FLIP CAMERA
-   ================================================================ */
-el.flipBtn.addEventListener('click', async () => {
-  state.facingMode = state.facingMode === 'environment' ? 'user' : 'environment';
-  await startCamera();
-});
-
-/* ================================================================
-   FILE UPLOAD + OCR
-   ================================================================ */
-el.fileInput.addEventListener('change', handleFileUpload);
-el.browseBtn.addEventListener('click', () => el.fileInput.click());
-
-// Drag and drop
-el.dropzone.addEventListener('dragover', e => {
-  e.preventDefault();
-  el.dropzone.classList.add('dragover');
-});
-el.dropzone.addEventListener('dragleave', () => el.dropzone.classList.remove('dragover'));
-el.dropzone.addEventListener('drop', e => {
-  e.preventDefault();
-  el.dropzone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) processUploadedFile(file);
-});
-
-async function handleFileUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  processUploadedFile(file);
-}
-
-async function processUploadedFile(file) {
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const imageDataURL = e.target.result;
-    showProcessingModal();
-
-    const img = new Image();
-    img.onload = async () => {
-      const canvas = document.createElement('canvas');
-      canvas.width  = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const result = await runOCR(imageDataURL, canvas, ctx, img.width, img.height);
-      hideProcessingModal();
-      displayResult(imageDataURL, result);
-
-      // Switch to camera tab to show result
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      $('tab-camera').classList.add('active');
-      $('tab-camera').setAttribute('aria-selected', 'true');
-      $('panel-camera').classList.add('active');
-    };
-    img.src = imageDataURL;
-  };
-  reader.readAsDataURL(file);
-}
-
-/* ================================================================
-   RESCAN
-   ================================================================ */
-el.rescanBtn.addEventListener('click', () => {
-  el.ocrResult.style.display = 'none';
-  // Clear form
-  ['surname','given','nationality','dob','passport','sex','expiry','pob','mrz1','mrz2'].forEach(id => {
-    const input = $(id);
-    if (!input) return;
-    input.value = '';
-    input.classList.remove('autofilled');
-    const badge = $(`badge-${id}`);
-    if (badge) badge.style.display = 'none';
-  });
-  openScanner();
-});
-
-/* ================================================================
-   QR CODE GENERATOR (Pure canvas — no library needed)
-   ================================================================ */
-function drawQRCode() {
-  const canvas = el.qrCanvas;
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const size = 160;
-  canvas.width = canvas.height = size;
-
-  // White background
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, size, size);
-
-  // Generate a simple visual QR-like pattern
-  // (Actual QR encoding requires a library; this is a visual representation)
-  const modules = generateFakeQRModules(25);
-  const cellSize = size / 25;
-
-  ctx.fillStyle = '#000';
-  modules.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      if (cell) {
-        ctx.fillRect(
-          Math.round(x * cellSize),
-          Math.round(y * cellSize),
-          Math.round(cellSize),
-          Math.round(cellSize)
-        );
-      }
-    });
-  });
-
-  // Draw finder patterns (three corner squares — real QR)
-  drawFinderPattern(ctx, 0, 0, cellSize);
-  drawFinderPattern(ctx, 18, 0, cellSize);
-  drawFinderPattern(ctx, 0, 18, cellSize);
-}
-
-function generateFakeQRModules(size) {
-  const grid = Array.from({ length: size }, () => Array(size).fill(0));
-
-  // Random data modules (excluding finder pattern zones)
-  const finderZones = (x, y) =>
-    (x < 8 && y < 8) || (x >= size-8 && y < 8) || (x < 8 && y >= size-8);
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      if (!finderZones(x, y)) {
-        grid[y][x] = Math.random() > 0.5 ? 1 : 0;
-      }
-    }
+  try {
+    await track.applyConstraints({ advanced: [{ torch: state.torchOn }] });
+    dom.torchBtn.classList.toggle('torch-on', state.torchOn);
+    dom.torchBtn.setAttribute('aria-pressed', String(state.torchOn));
+  } catch (err) {
+    console.warn('Torch error:', err);
+    state.torchOn = false;
   }
-  return grid;
 }
 
-function drawFinderPattern(ctx, gx, gy, cellSize) {
-  const draw = (x, y, w, h, fill) => {
-    ctx.fillStyle = fill;
-    ctx.fillRect(
-      Math.round((gx + x) * cellSize),
-      Math.round((gy + y) * cellSize),
-      Math.round(w * cellSize),
-      Math.round(h * cellSize)
-    );
-  };
-  draw(0, 0, 7, 7, '#000');  // outer black
-  draw(1, 1, 5, 5, '#fff');  // white border
-  draw(2, 2, 3, 3, '#000');  // inner black
-}
-
-/* ================================================================
-   UTILITY
-   ================================================================ */
+/* ============================================================
+   UTILITIES
+   ============================================================ */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/* ================================================================
-   FORM SUBMIT
-   ================================================================ */
-document.getElementById('visaForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const surname = $('surname').value.trim();
-  if (!surname) {
-    $('surname').focus();
-    $('fg-surname').style.animation = 'shake 0.4s ease';
-    setTimeout(() => $('fg-surname').style.animation = '', 400);
-    return;
-  }
-  // Success navigation simulation
-  const btn = $('nextBtn');
-  btn.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <polyline points="20,6 9,17 4,12"/>
-    </svg>
-    Saved — Continuing…
-  `;
-  btn.style.background = 'linear-gradient(135deg, #30d988, #1db870)';
-  btn.disabled = true;
-  setTimeout(() => {
-    btn.innerHTML = `Continue <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>`;
-    btn.style.background = '';
-    btn.disabled = false;
-  }, 2200);
-});
-
-// Shake keyframe
-const shakeStyle = document.createElement('style');
-shakeStyle.textContent = `
-@keyframes shake {
-  0%,100% { transform:translateX(0); }
-  20%      { transform:translateX(-6px); }
-  40%      { transform:translateX(6px); }
-  60%      { transform:translateX(-4px); }
-  80%      { transform:translateX(4px); }
-}`;
-document.head.appendChild(shakeStyle);
-
-/* ================================================================
-   KEYBOARD ESCAPE TO CLOSE
-   ================================================================ */
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && el.overlay.style.display !== 'none') {
-    closeScanner();
+/* ============================================================
+   KEYBOARD ACCESSIBILITY — close on Escape
+   ============================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (dom.successScreen.style.display !== 'none') {
+      dom.successScreen.style.display = 'none';
+      dom.desktopView.style.display = 'flex';
+      return;
+    }
+    if (dom.transitionOverlay.style.display !== 'none') {
+      dom.transitionOverlay.style.display = 'none';
+      closeMobileScanner();
+      return;
+    }
+    if (dom.mobileView.style.display !== 'none') {
+      closeMobileScanner();
+    }
   }
 });
 
-/* ================================================================
-   INIT — draw QR if on QR tab
-   ================================================================ */
-document.addEventListener('DOMContentLoaded', () => {
-  // Check camera API availability
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    el.startBtn.innerHTML = '⚠️ Camera not supported in this browser';
-    el.startBtn.disabled = true;
+/* ============================================================
+   VISIBILITY CHANGE — pause detection when tab hidden
+   ============================================================ */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && state.scanning) {
+    cancelAnimationFrame(state.rafId);
+    state.scanning = false;
+  } else if (!document.hidden && state.stream && !state.scanning && !state.captured) {
+    beginDetectionLoop();
   }
 });
-
-console.log('%c VisaPortal Scanner Ready ', 'background:#4a7fff;color:#fff;padding:4px 12px;border-radius:4px;font-weight:bold;');

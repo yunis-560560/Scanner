@@ -2,625 +2,444 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visa Application — Passport Scanner</title>
-  <meta name="description" content="Apply for your visa online. Scan both sides of your passport for automatic data extraction." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Passport Verification — Secure e-KYC Identity Check</title>
+  <meta name="description" content="Secure passport verification using e-KYC technology. Scan both sides of your passport for instant identity verification." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <!-- Tesseract.js — Real in-browser OCR engine -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
-  <!-- ======== NAVBAR ======== -->
-  <nav class="navbar" role="navigation" aria-label="Main navigation">
-    <div class="nav-inner">
-      <div class="nav-brand">
-        <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9,22 9,12 15,12 15,22"/>
+<!-- ════════════════════════════════════════════════════════════
+     DESKTOP VIEW — Clean white e-KYC waiting screen
+     ════════════════════════════════════════════════════════════ -->
+<div class="desktop-view" id="desktopView">
+
+  <!-- Header -->
+  <header class="dsk-header" role="banner">
+    <div class="dsk-header-inner">
+      <div class="dsk-brand">
+        <div class="dsk-brand-logo" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
         </div>
-        <span class="brand-name">VisaPortal</span>
+        <span class="dsk-brand-name">SecureID</span>
+        <span class="dsk-brand-pill">e-KYC</span>
       </div>
-      <div class="nav-links">
-        <a href="#" class="nav-link active">Application</a>
-        <a href="#" class="nav-link">Status</a>
-        <a href="#" class="nav-link">FAQ</a>
-        <a href="#" class="nav-link nav-btn-outline">Sign In</a>
+      <div class="dsk-header-meta">
+        <div class="dsk-enc-badge" aria-label="256-bit encrypted session">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          256-bit SSL
+        </div>
+        <span class="dsk-session-id">Session: <strong>KYC-2074-XK</strong></span>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <!-- ======== HERO ======== -->
-  <section class="hero-section">
-    <div class="hero-content">
-      <div class="step-badge"><span class="step-dot"></span>Step 2 of 5 — Document Verification</div>
-      <h1 class="hero-title">Verify Your Identity</h1>
-      <p class="hero-subtitle">Scan both sides of your passport. Our AI-powered OCR engine will auto-read and fill every field automatically.</p>
-    </div>
-    <div class="progress-bar-wrap">
-      <div class="progress-bar"><div class="progress-fill" style="width:40%"></div></div>
-      <span class="progress-label">40% Complete</span>
-    </div>
-  </section>
+  <!-- Main -->
+  <main class="dsk-main" role="main">
 
-  <!-- ======== MAIN ======== -->
-  <main class="main-content" role="main">
-
-    <!-- ===== SCAN CARD ===== -->
-    <section class="card scan-card">
-
-      <div class="card-header">
-        <div class="card-icon passport-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="2" width="18" height="20" rx="3"/>
-            <circle cx="12" cy="9" r="3"/>
-            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
-            <line x1="8" y1="14" x2="16" y2="14"/>
+    <!-- Step Indicator -->
+    <nav class="dsk-stepper" aria-label="Verification progress">
+      <div class="dsk-step dsk-step--done" id="dskStep1" aria-current="false">
+        <div class="dsk-step-circle" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20,6 9,17 4,12"/>
           </svg>
         </div>
-        <div>
-          <h2 class="card-title">Scan Passport — Both Sides</h2>
-          <p class="card-subtitle">First scan the front (photo/data page), then flip and scan the back (visa/observation page)</p>
+        <div class="dsk-step-meta">
+          <span class="dsk-step-num">Step 1</span>
+          <span class="dsk-step-label">Phone Linked</span>
         </div>
       </div>
 
-      <!-- Dual Side Progress -->
-      <div class="dual-side-tracker" id="dualTracker">
-        <div class="side-step side-step--front active" id="sideStepFront">
-          <div class="side-thumb">
-            <svg width="32" height="44" viewBox="0 0 32 44" fill="none">
-              <rect x="1" y="1" width="30" height="42" rx="4" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="16" cy="16" r="6" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="28" x2="26" y2="28" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="33" x2="20" y2="33" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="38" x2="22" y2="38" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <div class="side-info">
-            <span class="side-label">Front Side</span>
-            <span class="side-desc">Photo · Name · MRZ Data</span>
-          </div>
-          <div class="side-status" id="frontStatus">
-            <span class="side-badge pending">Pending</span>
-          </div>
-        </div>
+      <div class="dsk-step-connector dsk-step-connector--done" aria-hidden="true"></div>
 
-        <div class="side-divider">
-          <div class="side-divider-line"></div>
-          <div class="side-divider-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-              <path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-            </svg>
-          </div>
-          <div class="side-divider-line"></div>
+      <div class="dsk-step dsk-step--active" id="dskStep2" aria-current="step">
+        <div class="dsk-step-circle" aria-hidden="true">
+          <div class="dsk-step-ripple"></div>
+          <span>2</span>
         </div>
-
-        <div class="side-step side-step--back" id="sideStepBack">
-          <div class="side-thumb back-thumb">
-            <svg width="32" height="44" viewBox="0 0 32 44" fill="none">
-              <rect x="1" y="1" width="30" height="42" rx="4" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="10" x2="26" y2="10" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="16" x2="26" y2="16" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="22" x2="22" y2="22" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="6" y="28" width="20" height="6" rx="2" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6" y1="38" x2="18" y2="38" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <div class="side-info">
-            <span class="side-label">Back Side</span>
-            <span class="side-desc">Visa · Issue Date · Stamps</span>
-          </div>
-          <div class="side-status" id="backStatus">
-            <span class="side-badge locked">Locked</span>
-          </div>
+        <div class="dsk-step-meta">
+          <span class="dsk-step-num">Step 2</span>
+          <span class="dsk-step-label">Capture Started</span>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="device-tabs" role="tablist">
-        <button class="tab-btn active" role="tab" aria-selected="true" id="tab-camera" data-mode="camera">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          Use Camera
-        </button>
-        <button class="tab-btn" role="tab" aria-selected="false" id="tab-upload" data-mode="upload">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Upload Both Sides
-        </button>
-      </div>
+      <div class="dsk-step-connector" aria-hidden="true"></div>
 
-      <!-- Camera Panel -->
-      <div class="tab-panel active" id="panel-camera">
-        <div class="scan-area" id="scanArea">
-          <div class="scan-placeholder" id="scanPlaceholder">
-            <div class="dual-guide">
-              <div class="guide-passport guide-front">
-                <svg width="48" height="64" viewBox="0 0 48 64" fill="none">
-                  <rect x="2" y="2" width="44" height="60" rx="5" stroke="rgba(201,168,76,0.7)" stroke-width="2"/>
-                  <circle cx="24" cy="22" r="9" stroke="rgba(201,168,76,0.7)" stroke-width="2"/>
-                  <line x1="10" y1="40" x2="38" y2="40" stroke="rgba(201,168,76,0.5)" stroke-width="2"/>
-                  <line x1="10" y1="48" x2="30" y2="48" stroke="rgba(201,168,76,0.5)" stroke-width="2"/>
-                  <line x1="10" y1="56" x2="34" y2="56" stroke="rgba(201,168,76,0.5)" stroke-width="2"/>
-                </svg>
-                <span>Front</span>
-              </div>
-              <div class="guide-arrow">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M5 12h14"/><polyline points="12,5 19,12 12,19"/></svg>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M5 12h14"/><polyline points="12,5 19,12 12,19"/></svg>
-              </div>
-              <div class="guide-passport guide-back">
-                <svg width="48" height="64" viewBox="0 0 48 64" fill="none">
-                  <rect x="2" y="2" width="44" height="60" rx="5" stroke="rgba(74,127,255,0.5)" stroke-width="2"/>
-                  <line x1="10" y1="14" x2="38" y2="14" stroke="rgba(74,127,255,0.4)" stroke-width="2"/>
-                  <line x1="10" y1="22" x2="38" y2="22" stroke="rgba(74,127,255,0.4)" stroke-width="2"/>
-                  <line x1="10" y1="30" x2="30" y2="30" stroke="rgba(74,127,255,0.4)" stroke-width="2"/>
-                  <rect x="10" y="38" width="28" height="10" rx="3" stroke="rgba(74,127,255,0.4)" stroke-width="2"/>
-                  <line x1="10" y1="54" x2="24" y2="54" stroke="rgba(74,127,255,0.4)" stroke-width="2"/>
-                </svg>
-                <span>Back</span>
-              </div>
-            </div>
-            <h3 class="placeholder-title">Dual-Side Passport Scanner</h3>
-            <p class="placeholder-desc">We'll guide you through scanning the front then back. Tesseract OCR will auto-read all fields.</p>
-            <button class="btn-primary" id="startCameraBtn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Start Scanning — Front Side First
-            </button>
-          </div>
-
-          <!-- Captured previews (shown after scanning) -->
-          <div class="captured-previews" id="capturedPreviews" style="display:none">
-            <div class="preview-card" id="previewFront">
-              <div class="preview-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-                Front Scanned
-              </div>
-              <img id="previewFrontImg" src="" alt="Front side" class="preview-img"/>
-            </div>
-            <div class="preview-card preview-card--back" id="previewBack">
-              <div class="preview-label preview-label--back" id="previewBackLabel">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Back Pending
-              </div>
-              <img id="previewBackImg" src="" alt="Back side" class="preview-img" style="display:none"/>
-              <div class="preview-placeholder-back" id="previewBackPlaceholder">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="18" height="20" rx="3"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
-                <span>Flip passport &amp; scan back</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Scan back button (shown after front captured) -->
-        <div class="scan-back-cta" id="scanBackCta" style="display:none">
-          <button class="btn-primary btn-scan-back" id="scanBackBtn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-            </svg>
-            Flip Passport — Scan Back Side
-          </button>
-          <button class="btn-skip" id="skipBackBtn">Skip back side →</button>
-        </div>
-
-        <!-- Rescan + OCR result banner -->
-        <div class="ocr-result" id="ocrResult" style="display:none">
-          <div class="ocr-header">
-            <div class="ocr-badge success">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-              Both Sides Read — All Fields Auto-Filled
-            </div>
-            <button class="btn-text" id="rescanBtn">Rescan</button>
-          </div>
-          <div class="captured-duo">
-            <div class="duo-img-wrap">
-              <span class="duo-tag">FRONT</span>
-              <img id="capturedFrontImg" src="" alt="Passport front" class="duo-img"/>
-              <div class="mrz-highlight" id="mrzHighlight"></div>
-            </div>
-            <div class="duo-img-wrap">
-              <span class="duo-tag duo-tag--back">BACK</span>
-              <img id="capturedBackImg" src="" alt="Passport back" class="duo-img"/>
-            </div>
-          </div>
+      <div class="dsk-step" id="dskStep3" aria-current="false">
+        <div class="dsk-step-circle" aria-hidden="true"><span>3</span></div>
+        <div class="dsk-step-meta">
+          <span class="dsk-step-num">Step 3</span>
+          <span class="dsk-step-label">Capture Complete</span>
         </div>
       </div>
+    </nav>
 
-      <!-- Upload Panel -->
-      <div class="tab-panel" id="panel-upload">
-        <div class="upload-dual">
-          <div class="upload-half">
-            <div class="upload-dropzone" id="dropzoneFront" data-side="front">
-              <input type="file" id="fileInputFront" accept="image/*" class="file-input" aria-label="Upload passport front"/>
-              <div class="upload-content">
-                <div class="upload-icon upload-icon--gold">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                </div>
-                <h4 class="upload-title">Front Side</h4>
-                <p class="upload-desc">Photo · MRZ data page</p>
-                <div class="upload-preview-thumb" id="thumbFront" style="display:none"><img id="thumbFrontImg" src="" alt=""/></div>
-              </div>
-            </div>
-          </div>
-          <div class="upload-half">
-            <div class="upload-dropzone" id="dropzoneBack" data-side="back">
-              <input type="file" id="fileInputBack" accept="image/*" class="file-input" aria-label="Upload passport back"/>
-              <div class="upload-content">
-                <div class="upload-icon upload-icon--blue">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                </div>
-                <h4 class="upload-title">Back Side</h4>
-                <p class="upload-desc">Visa stamps · Issue info</p>
-                <div class="upload-preview-thumb" id="thumbBack" style="display:none"><img id="thumbBackImg" src="" alt=""/></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="upload-actions" id="uploadActions" style="display:none">
-          <button class="btn-primary" id="processUploadBtn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            Read Passport — Extract All Fields
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== FORM CARD ===== -->
-    <section class="card form-card" id="formCard">
-      <div class="card-header">
-        <div class="card-icon form-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-        </div>
-        <div>
-          <h2 class="card-title">Passport Details</h2>
-          <p class="card-subtitle">Auto-filled from both sides — verify and edit if needed</p>
-        </div>
-        <div class="form-ocr-badge" id="formOcrBadge" style="display:none">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-          OCR Complete
-        </div>
-      </div>
-
-      <form class="visa-form" id="visaForm" novalidate>
-
-        <!-- === SECTION: FRONT PAGE DATA === -->
-        <div class="form-section-label">
-          <div class="fsl-dot fsl-dot--gold"></div>
-          Personal Information <span class="fsl-src">(from front page)</span>
-        </div>
-        <div class="form-grid">
-
-          <div class="form-group" id="fg-surname">
-            <label class="form-label" for="surname">Surname / Family Name <span class="required">*</span></label>
-            <div class="input-wrap">
-              <input type="text" id="surname" name="surname" class="form-input" placeholder="As printed on passport" autocomplete="family-name"/>
-              <div class="input-autofill-badge" id="badge-surname" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-given">
-            <label class="form-label" for="given">Given Names <span class="required">*</span></label>
-            <div class="input-wrap">
-              <input type="text" id="given" name="given" class="form-input" placeholder="As printed on passport" autocomplete="given-name"/>
-              <div class="input-autofill-badge" id="badge-given" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-nationality">
-            <label class="form-label" for="nationality">Nationality <span class="required">*</span></label>
-            <div class="input-wrap">
-              <input type="text" id="nationality" name="nationality" class="form-input" placeholder="Country of citizenship"/>
-              <div class="input-autofill-badge" id="badge-nationality" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-dob">
-            <label class="form-label" for="dob">Date of Birth <span class="required">*</span></label>
-            <div class="input-wrap">
-              <input type="date" id="dob" name="dob" class="form-input"/>
-              <div class="input-autofill-badge" id="badge-dob" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-sex">
-            <label class="form-label" for="sex">Sex <span class="required">*</span></label>
-            <div class="input-wrap">
-              <select id="sex" name="sex" class="form-input form-select">
-                <option value="">Select</option>
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-              </select>
-              <div class="input-autofill-badge" id="badge-sex" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-pob">
-            <label class="form-label" for="pob">Place of Birth</label>
-            <div class="input-wrap">
-              <input type="text" id="pob" name="pob" class="form-input" placeholder="City / Region"/>
-              <div class="input-autofill-badge" id="badge-pob" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- === SECTION: PASSPORT DOCUMENT DATA === -->
-        <div class="form-section-label">
-          <div class="fsl-dot fsl-dot--blue"></div>
-          Passport Document <span class="fsl-src">(from front page)</span>
-        </div>
-        <div class="form-grid">
-
-          <div class="form-group" id="fg-passport">
-            <label class="form-label" for="passport">Passport Number <span class="required">*</span></label>
-            <div class="input-wrap">
-              <input type="text" id="passport" name="passport" class="form-input" placeholder="e.g. Y9634514" autocomplete="off"/>
-              <div class="input-autofill-badge" id="badge-passport" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-doctype">
-            <label class="form-label" for="doctype">Document Type</label>
-            <div class="input-wrap">
-              <select id="doctype" name="doctype" class="form-input form-select">
-                <option value="">Select</option>
-                <option value="P">Passport (P)</option>
-                <option value="PD">Diplomatic (PD)</option>
-                <option value="PO">Official (PO)</option>
-              </select>
-              <div class="input-autofill-badge" id="badge-doctype" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-issuing">
-            <label class="form-label" for="issuing">Issuing Country</label>
-            <div class="input-wrap">
-              <input type="text" id="issuing" name="issuing" class="form-input" placeholder="Country that issued passport"/>
-              <div class="input-autofill-badge" id="badge-issuing" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-expiry">
-            <label class="form-label" for="expiry">Expiry Date <span class="required">*</span></label>
-            <div class="input-wrap">
-              <input type="date" id="expiry" name="expiry" class="form-input"/>
-              <div class="input-autofill-badge" id="badge-expiry" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- === SECTION: BACK PAGE DATA === -->
-        <div class="form-section-label">
-          <div class="fsl-dot fsl-dot--purple"></div>
-          Issue & Visa Information <span class="fsl-src">(from back page)</span>
-        </div>
-        <div class="form-grid">
-
-          <div class="form-group" id="fg-issueDate">
-            <label class="form-label" for="issueDate">Date of Issue</label>
-            <div class="input-wrap">
-              <input type="date" id="issueDate" name="issueDate" class="form-input"/>
-              <div class="input-autofill-badge" id="badge-issueDate" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-issuePlace">
-            <label class="form-label" for="issuePlace">Place of Issue</label>
-            <div class="input-wrap">
-              <input type="text" id="issuePlace" name="issuePlace" class="form-input" placeholder="City / Authority"/>
-              <div class="input-autofill-badge" id="badge-issuePlace" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-visaType">
-            <label class="form-label" for="visaType">Visa Type (if any)</label>
-            <div class="input-wrap">
-              <input type="text" id="visaType" name="visaType" class="form-input" placeholder="Tourist / Business / Student"/>
-              <div class="input-autofill-badge" id="badge-visaType" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-
-          <div class="form-group" id="fg-authority">
-            <label class="form-label" for="authority">Issuing Authority</label>
-            <div class="input-wrap">
-              <input type="text" id="authority" name="authority" class="form-input" placeholder="Ministry / Passport Office"/>
-              <div class="input-autofill-badge" id="badge-authority" style="display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Auto-filled</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- === SECTION: MRZ (Machine Readable Zone) === -->
-        <div class="form-section-label">
-          <div class="fsl-dot fsl-dot--green"></div>
-          Machine Readable Zone (MRZ)
-        </div>
-        <div class="form-grid">
-          <div class="form-group form-group--full" id="fg-mrz">
-            <input type="text" id="mrz1" name="mrz1" class="form-input mrz-input" placeholder="MRZ Line 1 — auto-read from scan" readonly/>
-            <input type="text" id="mrz2" name="mrz2" class="form-input mrz-input" placeholder="MRZ Line 2 — auto-read from scan" readonly style="margin-top:8px"/>
-          </div>
-          <div class="form-group form-group--full" id="fg-rawocr">
-            <label class="form-label" for="rawOcrText">Raw OCR Text (editable)</label>
-            <textarea id="rawOcrText" name="rawOcrText" class="form-input ocr-textarea" placeholder="Extracted text will appear here for verification" rows="3"></textarea>
-          </div>
-        </div>
-
-        <div class="form-footer">
-          <button type="button" class="btn-secondary" id="prevBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
-            Previous
-          </button>
-          <button type="submit" class="btn-primary" id="nextBtn">
-            Continue
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
-          </button>
-        </div>
-      </form>
-    </section>
-  </main>
-
-  <!-- ======== CAMERA SCANNER OVERLAY ======== -->
-  <div class="scanner-overlay" id="scannerOverlay" role="dialog" aria-modal="true" style="display:none">
-
-    <!-- Top bar -->
-    <div class="scanner-topbar">
-      <div class="scanner-side-indicator" id="scannerSideIndicator">
-        <div class="ssi-step ssi-step--front active" id="ssiStepFront">
-          <div class="ssi-num">1</div>
-          <span>Front</span>
-        </div>
-        <div class="ssi-line"></div>
-        <div class="ssi-step" id="ssiStepBack">
-          <div class="ssi-num">2</div>
-          <span>Back</span>
-        </div>
-      </div>
-      <button class="scanner-close" id="closeScannerBtn" aria-label="Close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <!-- Video -->
-    <video id="cameraVideo" autoplay playsinline muted class="camera-video"></video>
-    <canvas id="captureCanvas" style="display:none"></canvas>
-
-    <!-- Frame Overlay -->
-    <div class="frame-overlay" id="frameOverlay">
-      <div class="frame-mask frame-mask--top"></div>
-      <div class="frame-mask frame-mask--bottom"></div>
-      <div class="frame-mask frame-mask--left"></div>
-      <div class="frame-mask frame-mask--right"></div>
-
-      <div class="scan-frame" id="scanFrame">
-        <div class="corner corner--tl"></div>
-        <div class="corner corner--tr"></div>
-        <div class="corner corner--bl"></div>
-        <div class="corner corner--br"></div>
-        <div class="scan-line" id="scanLine"></div>
-
-        <!-- Crosshair -->
-        <div class="crosshair" aria-hidden="true">
-          <div class="crosshair-ring crosshair-ring--outer"></div>
-          <div class="crosshair-ring crosshair-ring--inner"></div>
-          <div class="crosshair-dot"></div>
-          <div class="crosshair-arm crosshair-arm--top"></div>
-          <div class="crosshair-arm crosshair-arm--right"></div>
-          <div class="crosshair-arm crosshair-arm--bottom"></div>
-          <div class="crosshair-arm crosshair-arm--left"></div>
-        </div>
-
-        <div class="detection-corners" id="detectionCorners">
-          <div class="det-dot det-dot--tl"></div>
-          <div class="det-dot det-dot--tr"></div>
-          <div class="det-dot det-dot--bl"></div>
-          <div class="det-dot det-dot--br"></div>
-        </div>
-      </div>
-
-      <!-- Instruction Banner -->
-      <div class="instruction-banner" id="instructionBanner">
-        <span class="instruction-icon" aria-hidden="true">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="9" r="3"/></svg>
-        </span>
-        <span class="instruction-text" id="instructionText">Fit the document into the frame</span>
-      </div>
-    </div>
-
-    <!-- Status -->
-    <div class="scanner-status">
-      <div class="status-indicator">
-        <span class="status-dot" id="statusDot"></span>
-        <span class="status-label" id="statusLabel">Initializing camera…</span>
-      </div>
-      <div class="detect-progress-bar" id="detectProgressBar" style="display:none">
-        <div class="detect-progress-fill" id="detectProgressFill"></div>
-      </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="scanner-controls">
-      <button class="ctrl-btn" id="torchBtn" aria-label="Torch">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/></svg>
-        <span>Torch</span>
-      </button>
-      <button class="capture-btn" id="manualCaptureBtn" aria-label="Capture">
-        <div class="capture-btn-ring"></div>
-        <div class="capture-btn-inner"></div>
-      </button>
-      <button class="ctrl-btn" id="flipCameraBtn" aria-label="Flip camera">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-        <span>Flip</span>
-      </button>
-    </div>
-
-    <!-- Side transition overlay (shown between front & back) -->
-    <div class="side-transition" id="sideTransition" style="display:none">
-      <div class="transition-card">
-        <div class="transition-check">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-        </div>
-        <h3 class="transition-title">Front Side Captured!</h3>
-        <p class="transition-desc">Now flip your passport and position the <strong>back side</strong> in the frame.</p>
-        <button class="btn-primary transition-btn" id="transitionContinueBtn">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>
-          Scan Back Side Now
-        </button>
-        <button class="btn-skip" id="transitionSkipBtn">Skip — use front data only</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======== OCR PROCESSING MODAL ======== -->
-  <div class="processing-modal" id="processingModal" style="display:none" role="status" aria-live="polite">
-    <div class="processing-card">
-      <div class="processing-animation">
-        <div class="processing-ring"></div>
-        <svg class="processing-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="9" r="3"/>
-          <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+    <!-- Info Banner -->
+    <div class="dsk-banner" role="note">
+      <div class="dsk-banner-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
       </div>
-      <h3 class="processing-title" id="processingTitle">Reading Passport…</h3>
-      <p class="processing-desc" id="processingDesc">Tesseract OCR is extracting all text</p>
+      <p class="dsk-banner-text">
+        You will need your <strong>mobile phone</strong> to complete passport verification
+      </p>
+    </div>
 
-      <!-- OCR progress bar -->
-      <div class="ocr-progress-wrap">
-        <div class="ocr-progress-bar">
-          <div class="ocr-progress-fill" id="ocrProgressFill"></div>
+    <!-- Content Grid -->
+    <div class="dsk-grid">
+
+      <!-- QR Code Card -->
+      <section class="dsk-card dsk-qr-card" aria-labelledby="qrCardTitle">
+        <div class="dsk-card-eyebrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z"/>
+            <path d="M17 17h4v4h-4z"/><path d="M14 17h3"/><path d="M17 14v3"/>
+          </svg>
+          Scan QR Code
         </div>
-        <span class="ocr-progress-pct" id="ocrProgressPct">0%</span>
-      </div>
 
-      <div class="processing-steps">
-        <div class="proc-step" id="procStep1"><div class="proc-dot"></div><span>Initializing Tesseract engine</span></div>
-        <div class="proc-step" id="procStep2"><div class="proc-dot"></div><span>Reading front side text</span></div>
-        <div class="proc-step" id="procStep3"><div class="proc-dot"></div><span>Parsing MRZ zone</span></div>
-        <div class="proc-step" id="procStep4"><div class="proc-dot"></div><span>Reading back side data</span></div>
-        <div class="proc-step" id="procStep5"><div class="proc-dot"></div><span>Filling all form fields</span></div>
+        <h2 class="dsk-card-title" id="qrCardTitle">Continue on Your Mobile Device</h2>
+        <p class="dsk-card-sub">Open your phone's camera and point it at the QR code to begin passport scanning on your mobile device.</p>
+
+        <!-- QR visual -->
+        <div class="dsk-qr-block">
+          <div class="dsk-qr-frame">
+            <canvas id="qrCanvas" width="190" height="190" aria-label="QR Code — scan with your phone camera"></canvas>
+            <span class="dsk-qr-corner dsk-qr-corner--tl" aria-hidden="true"></span>
+            <span class="dsk-qr-corner dsk-qr-corner--tr" aria-hidden="true"></span>
+            <span class="dsk-qr-corner dsk-qr-corner--bl" aria-hidden="true"></span>
+            <span class="dsk-qr-corner dsk-qr-corner--br" aria-hidden="true"></span>
+          </div>
+          <p class="dsk-qr-expire">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+            </svg>
+            Expires in&nbsp;<span id="qrCountdown" aria-live="polite">05:00</span>
+          </p>
+        </div>
+
+        <!-- How to use steps -->
+        <ol class="dsk-qr-steps" aria-label="How to scan">
+          <li class="dsk-qr-step">
+            <span class="dsk-qr-num">1</span>
+            <span>Open the camera app on your phone</span>
+          </li>
+          <li class="dsk-qr-step">
+            <span class="dsk-qr-num">2</span>
+            <span>Point it at the QR code above</span>
+          </li>
+          <li class="dsk-qr-step">
+            <span class="dsk-qr-num">3</span>
+            <span>Follow the on-screen instructions</span>
+          </li>
+        </ol>
+
+        <div class="dsk-divider" aria-hidden="true"><span>or demo on this screen</span></div>
+
+        <button class="dsk-open-btn" id="openScannerBtn" aria-label="Open passport scanner in this window">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          Open Passport Scanner
+        </button>
+      </section>
+
+      <!-- Info / Tips Card -->
+      <aside class="dsk-card dsk-info-card" aria-labelledby="infoCardTitle">
+        <h3 class="dsk-info-title" id="infoCardTitle">What you'll need</h3>
+
+        <ul class="dsk-needs-list" role="list">
+          <li class="dsk-needs-item">
+            <div class="dsk-needs-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="2" width="18" height="20" rx="3"/>
+                <circle cx="12" cy="9" r="3"/>
+                <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+              </svg>
+            </div>
+            <div>
+              <strong>Valid Passport</strong>
+              <p>Your original passport must be physically present and undamaged</p>
+            </div>
+          </li>
+          <li class="dsk-needs-item">
+            <div class="dsk-needs-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <path d="M12 18h.01"/>
+              </svg>
+            </div>
+            <div>
+              <strong>Phone with Camera</strong>
+              <p>Scan the QR code to open the scanner on your mobile device</p>
+            </div>
+          </li>
+          <li class="dsk-needs-item">
+            <div class="dsk-needs-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </div>
+            <div>
+              <strong>Good Lighting</strong>
+              <p>A well-lit room ensures the clearest passport capture</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="dsk-tips-box">
+          <div class="dsk-tips-head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+            </svg>
+            Tips for best results
+          </div>
+          <ul class="dsk-tips-list">
+            <li>Place passport on a flat, dark surface</li>
+            <li>Hold phone parallel to the passport</li>
+            <li>Ensure all four corners are visible</li>
+            <li>Avoid direct light reflections on the passport</li>
+          </ul>
+        </div>
+
+        <div class="dsk-security-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Images are end-to-end encrypted and never stored permanently.
+        </div>
+
+        <!-- Waiting indicator -->
+        <div class="dsk-waiting" id="dskWaiting" aria-live="polite" aria-label="Waiting for mobile device">
+          <div class="dsk-wait-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <span>Waiting for mobile device…</span>
+        </div>
+      </aside>
+
+    </div><!-- /dsk-grid -->
+  </main>
+</div><!-- /desktop-view -->
+
+
+<!-- ════════════════════════════════════════════════════════════
+     MOBILE CAMERA VIEW — Full-screen camera interface
+     ════════════════════════════════════════════════════════════ -->
+<div class="mobile-view" id="mobileView" style="display:none" role="dialog" aria-modal="true" aria-label="Passport scanner">
+
+  <!-- Live camera video -->
+  <video id="camVideo" autoplay playsinline muted class="cam-video" aria-hidden="true"></video>
+  <!-- Hidden canvas for frame capture -->
+  <canvas id="camCanvas" style="display:none" aria-hidden="true"></canvas>
+
+  <!-- Top navigation bar -->
+  <div class="mob-topbar" role="navigation" aria-label="Scanner navigation">
+    <div class="mob-steps" aria-label="Scan progress" role="list">
+      <div class="mob-step mob-step--active" id="mobStep1" role="listitem">
+        <div class="mob-step-dot" aria-hidden="true"></div>
+        <span>Front</span>
+      </div>
+      <div class="mob-connector" id="mobConnector" aria-hidden="true"></div>
+      <div class="mob-step" id="mobStep2" role="listitem">
+        <div class="mob-step-dot" aria-hidden="true"></div>
+        <span>Back</span>
+      </div>
+    </div>
+    <button class="mob-close-btn" id="closeMobileBtn" aria-label="Close passport scanner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Central scan area (guide + instruction + status) -->
+  <div class="mob-scan-area" id="mobScanArea">
+
+    <!-- Instruction pill — appears above the guide -->
+    <div class="mob-instruction" id="mobInstruction" role="status" aria-live="polite" aria-atomic="true">
+      <span class="mob-instr-icon" id="mobInstrIcon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="2" width="18" height="20" rx="3"/>
+          <circle cx="12" cy="9" r="3"/>
+        </svg>
+      </span>
+      <span class="mob-instr-text" id="mobInstrText">Fit the passport inside the frame.</span>
+    </div>
+
+    <!-- The passport guide frame — the core UI element -->
+    <div class="mob-guide-wrap">
+      <div class="scan-guide" id="scanGuide" aria-label="Passport scanning area">
+        <!-- Corner accent markers -->
+        <span class="guide-corner guide-corner--tl" aria-hidden="true"></span>
+        <span class="guide-corner guide-corner--tr" aria-hidden="true"></span>
+        <span class="guide-corner guide-corner--bl" aria-hidden="true"></span>
+        <span class="guide-corner guide-corner--br" aria-hidden="true"></span>
+        <!-- MRZ zone indicator at bottom of guide -->
+        <div class="mrz-zone" id="mrzZone" aria-hidden="true">
+          <div class="mrz-bar"></div>
+          <div class="mrz-bar mrz-bar--short"></div>
+          <span class="mrz-tag">MRZ</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side instruction (what to place) -->
+    <div class="mob-side-label" id="mobSideLabel" aria-live="polite">
+      <span class="mob-side-badge" id="mobSideBadge">FRONT</span>
+      <p class="mob-side-desc" id="mobSideDesc">Place the passport front page completely inside the frame. Ensure all four corners are visible.</p>
+    </div>
+
+  </div><!-- /mob-scan-area -->
+
+  <!-- Status bar -->
+  <div class="mob-status-bar">
+    <div class="mob-status-row" id="mobStatusRow">
+      <span class="mob-status-dot" id="mobStatusDot" aria-hidden="true"></span>
+      <span class="mob-status-text" id="mobStatusText" role="status" aria-live="polite">Initializing camera…</span>
+    </div>
+    <!-- Detection confidence bar -->
+    <div class="mob-detect-bar-wrap" id="mobDetectBarWrap">
+      <div class="mob-detect-bar">
+        <div class="mob-detect-fill" id="mobDetectFill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Detection confidence"></div>
       </div>
     </div>
   </div>
 
-  <!-- ======== SUCCESS TOAST ======== -->
-  <div class="toast success-toast" id="successToast" role="alert" style="display:none">
-    <div class="toast-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-    </div>
-    <div class="toast-content">
-      <strong>Passport fully read!</strong>
-      <span id="toastFields">All fields auto-filled from both sides.</span>
-    </div>
-    <button class="toast-close" id="toastCloseBtn">✕</button>
-  </div>
+  <!-- Torch button -->
+  <button class="mob-torch-btn" id="torchBtn" aria-label="Toggle flashlight" aria-pressed="false">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+    </svg>
+  </button>
 
-  <script src="scanner.js"></script>
+</div><!-- /mobile-view -->
+
+
+<!-- ════════════════════════════════════════════════════════════
+     FRONT → BACK TRANSITION OVERLAY
+     ════════════════════════════════════════════════════════════ -->
+<div class="transition-overlay" id="transitionOverlay" style="display:none" role="alertdialog" aria-modal="true" aria-labelledby="transTitle">
+  <div class="trans-card">
+    <div class="trans-check" aria-hidden="true">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="20,6 9,17 4,12"/>
+      </svg>
+    </div>
+    <div class="trans-badge">Front Page Captured</div>
+    <h2 class="trans-title" id="transTitle">Great job!</h2>
+    <p class="trans-desc">Now turn the passport over and place the <strong>back page</strong> completely inside the frame. Ensure all four corners are visible.</p>
+
+    <div class="trans-passport-visual" aria-hidden="true">
+      <div class="trans-passport trans-passport--done">
+        <svg width="40" height="56" viewBox="0 0 40 56" fill="none">
+          <rect x="1" y="1" width="38" height="54" rx="4" stroke="rgba(0,200,83,0.8)" stroke-width="1.5"/>
+          <circle cx="20" cy="18" r="7" stroke="rgba(0,200,83,0.6)" stroke-width="1.5"/>
+          <line x1="8" y1="32" x2="32" y2="32" stroke="rgba(0,200,83,0.4)" stroke-width="1.5"/>
+          <line x1="8" y1="38" x2="24" y2="38" stroke="rgba(0,200,83,0.4)" stroke-width="1.5"/>
+          <line x1="8" y1="44" x2="28" y2="44" stroke="rgba(0,200,83,0.4)" stroke-width="1.5"/>
+        </svg>
+        <span class="trans-passport-tag">Front ✓</span>
+      </div>
+      <div class="trans-flip-arrow" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2">
+          <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+      </div>
+      <div class="trans-passport trans-passport--next">
+        <svg width="40" height="56" viewBox="0 0 40 56" fill="none">
+          <rect x="1" y="1" width="38" height="54" rx="4" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <line x1="8" y1="10" x2="32" y2="10" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <line x1="8" y1="18" x2="32" y2="18" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <line x1="8" y1="26" x2="24" y2="26" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <rect x="8" y="34" width="24" height="8" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <line x1="8" y1="48" x2="18" y2="48" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+        </svg>
+        <span class="trans-passport-tag">Back</span>
+      </div>
+    </div>
+
+    <button class="trans-btn" id="transContinueBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+      </svg>
+      Scan Back Page Now
+    </button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SUCCESS SCREEN
+     ════════════════════════════════════════════════════════════ -->
+<div class="success-screen" id="successScreen" style="display:none" role="alertdialog" aria-modal="true" aria-labelledby="successTitle">
+  <div class="success-content">
+
+    <!-- Animated checkmark -->
+    <div class="success-mark" id="successMark" aria-hidden="true">
+      <svg class="success-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle class="success-ring" cx="55" cy="55" r="50" fill="none" stroke="#00C853" stroke-width="4"/>
+        <polyline class="success-tick" points="32,57 48,73 78,38" fill="none" stroke="#00C853" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="success-badge" aria-hidden="true">Verified Successfully</div>
+    <h1 class="success-title" id="successTitle">Passport Successfully Verified</h1>
+    <p class="success-sub">Both sides of your passport have been captured successfully.</p>
+
+    <!-- Captured thumbnails -->
+    <div class="success-thumbs" id="successThumbs" aria-label="Captured passport images">
+      <div class="success-thumb">
+        <img id="thumbFrontImg" src="" alt="Captured front page of passport" class="success-thumb-img"/>
+        <span class="success-thumb-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20,6 9,17 4,12"/>
+          </svg>
+          Front
+        </span>
+      </div>
+      <div class="success-thumb">
+        <img id="thumbBackImg" src="" alt="Captured back page of passport" class="success-thumb-img"/>
+        <span class="success-thumb-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20,6 9,17 4,12"/>
+          </svg>
+          Back
+        </span>
+      </div>
+    </div>
+
+    <button class="success-btn" id="successContinueBtn">
+      Continue to Application
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9,18 15,12 9,6"/>
+      </svg>
+    </button>
+
+    <p class="success-note">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Your data is encrypted and secure. Processing your identity verification.
+    </p>
+  </div>
+</div>
+
+
+<script src="scanner.js"></script>
 </body>
 </html>
