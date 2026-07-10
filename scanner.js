@@ -27,7 +27,7 @@
    ============================================================ */
 const CONF_THRESHOLD   = 0.60;   // confidence to enter "almost" state
 const CONF_CAPTURE     = 0.82;   // confidence to trigger auto-capture
-const HOLD_DURATION_MS = 920;    // ms held at capture confidence before snap
+const HOLD_DURATION_MS = 1500;   // ms held at capture confidence before snap
 const ANALYSIS_RATE_MS = 180;    // frame analysis interval
 const QR_EXPIRE_SECS   = 300;    // 5 minutes
 
@@ -575,8 +575,8 @@ function updateDetection(analysis) {
   // Set instruction text
   setInstruction(instrKey);
 
-  // Auto-capture logic
-  if (conf >= CONF_CAPTURE && !state.captured) {
+  // Auto-capture logic: Must exceed capture confidence AND be held steady
+  if (conf >= CONF_CAPTURE && analysis.steadiness >= 0.75 && !state.captured) {
     if (!state.holdStart) {
       state.holdStart = Date.now();
     } else if (Date.now() - state.holdStart >= HOLD_DURATION_MS) {
