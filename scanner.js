@@ -943,18 +943,121 @@ function initCropUI() {
   dom.cropSvg.style.width = `${rect.width}px`;
   dom.cropSvg.style.height = `${rect.height}px`;
 
-  // Place initial green handles as a centered rectangle (12% padding on sides, 18% on top/bottom)
-  const padX = rect.width * 0.12;
-  const padY = rect.height * 0.18;
+  // Try auto corner detection first
+  let detected = null;
+  try {
+    const canvas = document.createElement('canvas');
+    // Using a low resolution (240x180) speeds up processing and filters out texture/text noise
+    const w = 240, h = 180;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(dom.cropImgPreview, 0, 0, w, h);
+    const imgData = ctx.getImageData(0, 0, w, h);
+    
+    const corners = detectDocumentCorners(imgData);
+    if (corners) {
+      // Map coordinates back to screen SVG coordinate space
+      const scaleX = rect.width / w;
+      const scaleY = rect.height / h;
+      detected = {
+        tl: { x: corners.tl.x * scaleX, y: corners.tl.y * scaleY },
+        tr: { x: corners.tr.x * scaleX, y: corners.tr.y * scaleY },
+        br: { x: corners.br.x * scaleX, y: corners.br.y * scaleY },
+        bl: { x: corners.bl.x * scaleX, y: corners.bl.y * scaleY }
+      };
+    }
+  } catch (err) {
+    console.warn('Corner detection error:', err);
+  }
 
-  state.cropCorners = {
-    tl: { x: padX, y: padY },
-    tr: { x: rect.width - padX, y: padY },
-    br: { x: rect.width - padX, y: rect.height - padY },
-    bl: { x: padX, y: rect.height - padY }
-  };
+  if (detected) {
+    state.cropCorners = detected;
+  } else {
+    // Centered crop template fallback
+    const padX = rect.width * 0.12;
+    const padY = rect.height * 0.18;
+    state.cropCorners = {
+      tl: { x: padX, y: padY },
+      tr: { x: rect.width - padX, y: padY },
+      br: { x: rect.width - padX, y: rect.height - padY },
+      bl: { x: padX, y: rect.height - padY }
+    };
+  }
 
   updateCropPolygon();
+}
+
+/* ============================================================
+   AUTOMATIC DOCUMENT CORNER DETECTION (Adaptive Edge Mapping)
+   ============================================================ */
+function detectDocumentCorners(imgData) {
+  const w = imgData.width;
+  const h = imgData.height;
+  const data = imgData.data;
+  
+  // Calculate average brightness of the image to set an adaptive threshold
+  let sumLuma = 0;
+  const total = w * h;
+  const step = 4; // Sample every 4th pixel to make it fast
+  
+  for (let i = 0; i < data.length; i += 4 * step) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    sumLuma += (0.299 * r + 0.587 * g + 0.114 * b);
+  }
+  const avgLuma = sumLuma / (total / step);
+  
+  // Set threshold slightly above average to distinguish white passport from darker background
+  const threshold = Math.max(90, Math.min(180, avgLuma * 1.15));
+  
+  // Find extreme boundaries that form the document shape
+  let minSum = Infinity, maxSum = -Infinity;
+  let minDiff = Infinity, maxDiff = -Infinity;
+  
+  let tl = null, tr = null, br = null, bl = null;
+  
+  for (let y = 0; y < h; y += 3) {
+    for (let x = 0; x < w; x += 3) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      
+      if (luma > threshold) {
+        // Top-Left minimizes x + y
+        const sum = x + y;
+        if (sum < minSum) {
+          minSum = sum;
+          tl = { x, y };
+        }
+        // Bottom-Right maximizes x + y
+        if (sum > maxSum) {
+          maxSum = sum;
+          br = { x, y };
+        }
+        // Top-Right maximizes x - y
+        const diff = x - y;
+        if (diff > maxDiff) {
+          maxDiff = diff;
+          tr = { x, y };
+        }
+        // Bottom-Left minimizes x - y
+        if (diff < minDiff) {
+          minDiff = diff;
+          bl = { x, y };
+        }
+      }
+    }
+  }
+  
+  // Validate detected coordinate points
+  if (!tl || !tr || !br || !bl) return null;
+  
+  // Check if coordinates represent a reasonable size block (e.g. at least 30% of image size)
+  if (Math.abs(tr.x - tl.x) < w * 0.3 || Math.abs(br.y - tr.y) < h * 0.3) {
+    return null;
+  }
+  
+  return { tl, tr, br, bl };
 }
 
 function updateCropPolygon() {
