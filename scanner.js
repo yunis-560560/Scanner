@@ -118,6 +118,7 @@ const dom = {
   cropScreen:       $('cropScreen'),
   cropImgPreview:   $('cropImgPreview'),
   cropGlareWarning: $('cropGlareWarning'),
+  cropMagnifier:    $('cropMagnifier'),
   cropSvg:          $('cropSvg'),
   cropPolygon:      $('cropPolygon'),
   cropResetBtn:     $('cropResetBtn'),
@@ -951,6 +952,13 @@ function openCropScreen(rawImageSrc, width, height) {
 function initCropUI() {
   const rect = dom.cropImgPreview.getBoundingClientRect();
   
+  // Set up offscreen canvas for magnification zoom source
+  offscreenCropCanvas = document.createElement('canvas');
+  offscreenCropCanvas.width = state.cropImageSize.w;
+  offscreenCropCanvas.height = state.cropImageSize.h;
+  const offCtx = offscreenCropCanvas.getContext('2d');
+  offCtx.drawImage(dom.cropImgPreview, 0, 0, state.cropImageSize.w, state.cropImageSize.h);
+
   dom.cropSvg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
   dom.cropSvg.style.width = `${rect.width}px`;
   dom.cropSvg.style.height = `${rect.height}px`;
@@ -1143,6 +1151,7 @@ async function resetCropCorners() {
 let activeHandle = null;
 
 let activeHandleId = null;
+let offscreenCropCanvas = null;
 
 function setupDragHandlers() {
   const svg = dom.cropSvg;
@@ -1153,9 +1162,9 @@ function setupDragHandlers() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Find which handle is closest to the pointer down position within a 36px touch area
+    // Find closest handle within a generous 50px touch target area
     let closestId = null;
-    let minD = 36;
+    let minD = 50;
     
     for (const [key, pos] of Object.entries(state.cropCorners)) {
       const dx = pos.x - x;
@@ -1163,13 +1172,14 @@ function setupDragHandlers() {
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d < minD) {
         minD = d;
-        closestId = key; // 'tl', 'tr', 'br', 'bl'
+        closestId = key;
       }
     }
     
     if (closestId) {
       activeHandleId = closestId;
       svg.setPointerCapture(e.pointerId);
+      updateMagnifier(state.cropCorners[activeHandleId].x, state.cropCorners[activeHandleId].y);
     }
   });
 
@@ -1186,17 +1196,68 @@ function setupDragHandlers() {
 
     state.cropCorners[activeHandleId] = { x, y };
     updateCropPolygon();
+    updateMagnifier(x, y);
   });
 
   const release = (e) => {
     if (activeHandleId) {
       svg.releasePointerCapture(e.pointerId);
       activeHandleId = null;
+      if (dom.cropMagnifier) {
+        dom.cropMagnifier.style.display = 'none';
+      }
     }
   };
 
   svg.addEventListener('pointerup', release);
   svg.addEventListener('pointercancel', release);
+}
+
+/* ============================================================
+   MAGNIFYING GLASS LOUPE PREVIEW
+   ============================================================ */
+function updateMagnifier(x, y) {
+  const magnifier = dom.cropMagnifier;
+  if (!magnifier || !offscreenCropCanvas) return;
+
+  magnifier.style.display = 'block';
+  const mCtx = magnifier.getContext('2d');
+  const size = magnifier.width; // 90px
+
+  // Map screen coordinates (x, y) to raw image coordinates
+  const rect = dom.cropImgPreview.getBoundingClientRect();
+  const scaleX = state.cropImageSize.w / rect.width;
+  const scaleY = state.cropImageSize.h / rect.height;
+
+  const rawX = x * scaleX;
+  const rawY = y * scaleY;
+
+  // Clear magnifier background
+  mCtx.fillStyle = '#0F172A';
+  mCtx.fillRect(0, 0, size, size);
+
+  // Crop a 48x48 pixel square area around the raw point
+  const srcSize = 48;
+  const sx = rawX - srcSize / 2;
+  const sy = rawY - srcSize / 2;
+
+  // Draw magnified image slice
+  mCtx.drawImage(offscreenCropCanvas, sx, sy, srcSize, srcSize, 0, 0, size, size);
+
+  // Draw central green crosshair line overlay
+  mCtx.strokeStyle = '#00C853';
+  mCtx.lineWidth = 2.5;
+  mCtx.beginPath();
+  
+  // Horizontal line
+  mCtx.moveTo(0, size / 2);
+  mCtx.lineTo(size, size / 2);
+  
+  // Vertical line
+  mCtx.moveTo(size / 2, 0);
+  mCtx.lineTo(size / 2, size);
+  
+  mCtx.stroke();
 }
 
 /* ============================================================

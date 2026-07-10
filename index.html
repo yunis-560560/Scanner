@@ -413,12 +413,13 @@
     <!-- Image preview area with interactive SVG overlay -->
     <div class="crop-view-container">
       <img id="cropImgPreview" class="crop-img-preview" alt="Document crop preview" />
+      <canvas id="cropMagnifier" width="90" height="90" class="crop-magnifier" style="display:none"></canvas>
       <svg id="cropSvg" class="crop-svg" xmlns="http://www.w3.org/2000/svg">
         <polygon id="cropPolygon" points="0,0 0,0 0,0 0,0" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853" stroke-width="2.5" />
-        <circle id="hTL" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
-        <circle id="hTR" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
-        <circle id="hBR" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
-        <circle id="hBL" class="crop-handle" r="14" fill="#FFFFFF" stroke="#00C853" stroke-width="2.5" />
+        <circle id="hTL" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+        <circle id="hTR" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+        <circle id="hBR" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+        <circle id="hBL" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
       </svg>
     </div>
 
