@@ -751,27 +751,10 @@ async function triggerCapture() {
   const guideX = guideRect.left - vidRect.left;
   const guideY = guideRect.top  - vidRect.top;
 
-  // Map to actual video pixel coordinates
-  let srcX = Math.round((guideX + offsetX) * scaleX);
-  let srcY = Math.round((guideY + offsetY) * scaleY);
-  let srcW = Math.round(guideRect.width  * scaleX);
-  let srcH = Math.round(guideRect.height * scaleY);
-
-  // Auto-crop inset (cut off 5% from each side to remove fingers, spine, and outer edges)
-  const insetX = Math.round(srcW * 0.05);
-  const insetY = Math.round(srcH * 0.05);
-
-  srcX += insetX;
-  srcY += insetY;
-  srcW -= (insetX * 2);
-  srcH -= (insetY * 2);
-
-  // Output canvas = cropped size
-  canvas.width  = srcW;
-  canvas.height = srcH;
-
-  // Draw only the cropped guide region
-  ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+  // Capture the FULL camera frame (so the user can adjust crop corners cleanly on the full photo)
+  canvas.width  = vw;
+  canvas.height = vh;
+  ctx.drawImage(video, 0, 0, vw, vh);
 
   const dataURL = canvas.toDataURL('image/jpeg', 0.95);
 
@@ -780,10 +763,10 @@ async function triggerCapture() {
 
   await sleep(280);
 
-  // Stop camera and open crop adjust screen
+  // Stop camera and open crop adjust screen with full frame
   stopCamera();
   dom.mobileView.style.display = 'none';
-  openCropScreen(dataURL, canvas.width, canvas.height);
+  openCropScreen(dataURL, vw, vh);
 }
 
 /* ============================================================
@@ -938,6 +921,12 @@ function openCropScreen(rawImageSrc, width, height) {
   state.cropImageSrc = rawImageSrc;
   state.cropImageSize = { w: width, h: height };
   
+  // Set the container aspect ratio to match the raw captured photo aspect ratio exactly
+  const container = dom.cropImgPreview.parentElement;
+  if (container) {
+    container.style.aspectRatio = `${width} / ${height}`;
+  }
+
   dom.cropImgPreview.src = rawImageSrc;
   
   dom.cropImgPreview.onload = () => {
@@ -954,9 +943,9 @@ function initCropUI() {
   dom.cropSvg.style.width = `${rect.width}px`;
   dom.cropSvg.style.height = `${rect.height}px`;
 
-  // Standard inset box corners for default crop placement
-  const padX = rect.width * 0.05;
-  const padY = rect.height * 0.05;
+  // Place initial green handles as a centered rectangle (12% padding on sides, 18% on top/bottom)
+  const padX = rect.width * 0.12;
+  const padY = rect.height * 0.18;
 
   state.cropCorners = {
     tl: { x: padX, y: padY },
