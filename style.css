@@ -427,7 +427,8 @@ a {
   box-shadow: var(--d-shadow-md), 0 0 0 1px var(--d-border-soft);
 }
 
-.dsk-qr-frame canvas {
+.dsk-qr-frame canvas,
+.dsk-qr-frame img {
   display: block;
   border-radius: 4px;
 }

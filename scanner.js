@@ -61,7 +61,7 @@ const dom = {
   /* Desktop */
   desktopView:      $('desktopView'),
   openScannerBtn:   $('openScannerBtn'),
-  qrCanvas:         $('qrCanvas'),
+  qrImage:          $('qrImage'),
   qrCountdown:      $('qrCountdown'),
 
   /* Mobile view */
@@ -202,104 +202,17 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ============================================================
-   QR CODE — Canvas generator with proper finder patterns
+   QR CODE — Dynamic URL generator using standard free API
    ============================================================ */
 function drawQRCode() {
-  const canvas = dom.qrCanvas;
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const SIZE = 190;
-  const CELLS = 25;
-  const cell = SIZE / CELLS;
+  const img = dom.qrImage;
+  if (!img) return;
 
-  // White background
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, SIZE, SIZE);
-
-  // Generate pseudo-random data modules
-  const grid = makeQRGrid(CELLS);
-
-  // Draw data modules
-  ctx.fillStyle = '#0F172A';
-  for (let y = 0; y < CELLS; y++) {
-    for (let x = 0; x < CELLS; x++) {
-      if (grid[y][x]) {
-        const px = Math.round(x * cell);
-        const py = Math.round(y * cell);
-        const cw = Math.round((x + 1) * cell) - px;
-        const ch = Math.round((y + 1) * cell) - py;
-        roundRect(ctx, px, py, cw, ch, 1);
-      }
-    }
-  }
-
-  // Finder patterns (three corners)
-  drawFinder(ctx, 0, 0, cell);
-  drawFinder(ctx, CELLS - 7, 0, cell);
-  drawFinder(ctx, 0, CELLS - 7, cell);
-}
-
-function makeQRGrid(size) {
-  const g = Array.from({ length: size }, () => Array(size).fill(0));
-  // Finder pattern zones (top-left, top-right, bottom-left) — leave them blank for now
-  const inFinder = (x, y) =>
-    (x < 9 && y < 9) ||
-    (x >= size - 8 && y < 9) ||
-    (x < 9 && y >= size - 8);
-
-  // Timing patterns
-  const onTiming = (x, y) => (x === 6 && y >= 8 && y < size - 8) || (y === 6 && x >= 8 && x < size - 8);
-
-  // Use deterministic "random" for consistency
-  let seed = 0x5CA1AB1E;
-  const rand = () => {
-    seed ^= seed << 13;
-    seed ^= seed >> 17;
-    seed ^= seed << 5;
-    return (seed >>> 0) / 0xFFFFFFFF;
-  };
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      if (inFinder(x, y)) continue;
-      if (onTiming(x, y)) { g[y][x] = (x + y) % 2 === 0 ? 1 : 0; continue; }
-      g[y][x] = rand() > 0.48 ? 1 : 0;
-    }
-  }
-  return g;
-}
-
-function drawFinder(ctx, gx, gy, cell) {
-  const ox = Math.round(gx * cell);
-  const oy = Math.round(gy * cell);
-  const c = cell;
-
-  // Outer 7×7 square
-  ctx.fillStyle = '#0F172A';
-  roundRect(ctx, ox, oy, Math.round(7 * c), Math.round(7 * c), 2);
-
-  // Inner white 5×5
-  ctx.fillStyle = '#FFFFFF';
-  roundRect(ctx, ox + Math.round(c), oy + Math.round(c), Math.round(5 * c), Math.round(5 * c), 1);
-
-  // Center 3×3
-  ctx.fillStyle = '#0F172A';
-  roundRect(ctx, ox + Math.round(2 * c), oy + Math.round(2 * c), Math.round(3 * c), Math.round(3 * c), 1);
-}
-
-function roundRect(ctx, x, y, w, h, r = 2) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  ctx.fill();
+  // Use the current page URL so scanning directly opens this exact page on mobile
+  const currentUrl = window.location.href || 'https://yunis-560560.github.io/Scanner/';
+  
+  // Use a completely free, open QR code generator API
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(currentUrl)}&ecc=M`;
 }
 
 /* ============================================================
@@ -313,23 +226,45 @@ function startQRCountdown() {
     if (dom.qrCountdown) dom.qrCountdown.textContent = `${m}:${s}`;
     if (state.qrSecsLeft === 0) {
       clearInterval(state.qrTimerId);
-      // Redraw QR with dim effect (expired)
       redrawExpiredQR();
     }
   }, 1000);
 }
 
 function redrawExpiredQR() {
-  const canvas = dom.qrCanvas;
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = '600 13px Inter, system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Expired — Refresh page', canvas.width / 2, canvas.height / 2 - 8);
-  ctx.fillText('to get a new QR code', canvas.width / 2, canvas.height / 2 + 10);
+  const img = dom.qrImage;
+  if (!img) return;
+
+  // Dim the QR code
+  img.style.opacity = '0.12';
+  img.style.filter = 'blur(1px)';
+
+  // Overlay an expiration message inside the parent frame container
+  const frame = img.parentElement;
+  if (frame) {
+    // Check if error overlay already exists
+    if (frame.querySelector('.qr-expired-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'qr-expired-overlay';
+    overlay.style.position = 'absolute';
+    overlay.style.inset = '0';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.background = 'rgba(255, 255, 255, 0.85)';
+    overlay.style.color = '#475569';
+    overlay.style.font = '600 13px Inter, system-ui, sans-serif';
+    overlay.style.textAlign = 'center';
+    overlay.style.padding = '16px';
+    overlay.style.borderRadius = 'var(--radius-md)';
+    overlay.innerHTML = `
+      <div style="font-weight: 700; color: #EF4444; margin-bottom: 4px;">QR Code Expired</div>
+      <div style="font-size: 11px; color: #64748B;">Refresh the page to get a new scannable code</div>
+    `;
+    frame.appendChild(overlay);
+  }
 }
 
 /* ============================================================
