@@ -236,11 +236,11 @@ function drawQRCode() {
   const img = dom.qrImage;
   if (!img) return;
 
-  // Use the current page URL so scanning directly opens this exact page on mobile
-  const currentUrl = window.location.href || 'https://yunis-560560.github.io/Scanner/';
+  // Always use the deployed GitHub Pages URL so scanning on phone redirects to the live page
+  const targetUrl = 'https://yunis-560560.github.io/Scanner/';
   
   // Use a completely free, open QR code generator API
-  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(currentUrl)}&ecc=M`;
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(targetUrl)}&ecc=M`;
 }
 
 /* ============================================================
