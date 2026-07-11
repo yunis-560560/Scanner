@@ -1221,16 +1221,17 @@ let offscreenCropCanvas = null;
 
 function setupDragHandlers() {
   const svg = dom.cropSvg;
+  const container = svg.parentElement; // .crop-view-container
   
-  svg.addEventListener('pointerdown', (e) => {
+  container.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    const rect = svg.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Find closest handle within a generous 50px touch target area
+    // Find closest handle within a generous 65px touch target area
     let closestId = null;
-    let minD = 50;
+    let minD = 65;
     
     for (const [key, pos] of Object.entries(state.cropCorners)) {
       const dx = pos.x - x;
@@ -1244,16 +1245,16 @@ function setupDragHandlers() {
     
     if (closestId) {
       activeHandleId = closestId;
-      svg.setPointerCapture(e.pointerId);
+      container.setPointerCapture(e.pointerId);
       updateMagnifier(state.cropCorners[activeHandleId].x, state.cropCorners[activeHandleId].y);
     }
   });
 
-  svg.addEventListener('pointermove', (e) => {
+  container.addEventListener('pointermove', (e) => {
     if (!activeHandleId) return;
     e.preventDefault();
 
-    const rect = svg.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
 
@@ -1267,7 +1268,7 @@ function setupDragHandlers() {
 
   const release = (e) => {
     if (activeHandleId) {
-      svg.releasePointerCapture(e.pointerId);
+      container.releasePointerCapture(e.pointerId);
       activeHandleId = null;
       if (dom.cropMagnifier) {
         dom.cropMagnifier.style.display = 'none';
@@ -1275,8 +1276,8 @@ function setupDragHandlers() {
     }
   };
 
-  svg.addEventListener('pointerup', release);
-  svg.addEventListener('pointercancel', release);
+  container.addEventListener('pointerup', release);
+  container.addEventListener('pointercancel', release);
 }
 
 /* ============================================================

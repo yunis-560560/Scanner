@@ -1780,6 +1780,7 @@ a {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.15);
+  touch-action: none;
 }
 
 .crop-img-preview {
