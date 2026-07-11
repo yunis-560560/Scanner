@@ -673,6 +673,257 @@
 </div>
 
 
+
+<!-- ════════════════════════════════════════════════════════════
+     APPLICATION FORM SCREEN
+     ════════════════════════════════════════════════════════════ -->
+<div class="app-form-screen" id="appFormScreen" style="display:none" role="main" aria-labelledby="appFormTitle">
+  <div class="app-form-wrap">
+
+    <!-- Header bar -->
+    <div class="app-form-header">
+      <button class="app-back-btn" id="appBackBtn" aria-label="Back to crop adjustment">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15,18 9,12 15,6"/>
+        </svg>
+        Back to Crop
+      </button>
+      <div class="app-form-brand">
+        <div class="dsk-brand-logo" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <span class="dsk-brand-name">SecureID</span>
+        <span class="dsk-brand-pill">e-KYC</span>
+      </div>
+    </div>
+
+    <!-- Passport images strip -->
+    <div class="app-form-thumbs" id="appFormThumbs">
+      <div class="app-form-thumb-wrap">
+        <img id="appThumbFront" class="app-form-thumb" src="" alt="Passport front"/>
+        <span class="app-form-thumb-tag">Front</span>
+      </div>
+      <div class="app-form-thumb-wrap">
+        <img id="appThumbBack" class="app-form-thumb" src="" alt="Passport back"/>
+        <span class="app-form-thumb-tag">Back</span>
+      </div>
+    </div>
+
+    <!-- Section title -->
+    <div class="app-form-title-row">
+      <div class="app-form-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Passport Details Verified
+      </div>
+      <h1 class="app-form-title" id="appFormTitle">Confirm Your Passport Details</h1>
+      <p class="app-form-sub">Review and confirm the details extracted from your passport. Edit any field if needed.</p>
+    </div>
+
+    <!-- Form -->
+    <form class="app-form" id="passportDetailsForm" novalidate autocomplete="off">
+
+      <!-- ── Personal Information ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          Personal Information
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group">
+            <label class="app-label" for="fieldSurname">Surname / Last Name</label>
+            <input class="app-input" type="text" id="fieldSurname" name="surname" placeholder="e.g. KUMAR" autocomplete="family-name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldGivenNames">Given Names</label>
+            <input class="app-input" type="text" id="fieldGivenNames" name="givenNames" placeholder="e.g. ASHISH" autocomplete="given-name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldDob">Date of Birth</label>
+            <input class="app-input" type="text" id="fieldDob" name="dob" placeholder="DD/MM/YYYY"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldGender">Gender</label>
+            <select class="app-input app-select" id="fieldGender" name="gender">
+              <option value="">Select gender</option>
+              <option value="M">Male (M)</option>
+              <option value="F">Female (F)</option>
+              <option value="X">Other (X)</option>
+            </select>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldNationality">Nationality</label>
+            <input class="app-input" type="text" id="fieldNationality" name="nationality" placeholder="e.g. INDIAN"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldPlaceOfBirth">Place of Birth</label>
+            <input class="app-input" type="text" id="fieldPlaceOfBirth" name="placeOfBirth" placeholder="e.g. AURAIYA, UTTAR PRADESH"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── Passport Information ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="2" width="18" height="20" rx="3"/>
+            <circle cx="12" cy="9" r="3"/>
+            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+          </svg>
+          Passport Information
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group">
+            <label class="app-label" for="fieldPassportNo">Passport Number</label>
+            <input class="app-input app-input--mono" type="text" id="fieldPassportNo" name="passportNo" placeholder="e.g. Y6978513" maxlength="9"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldCountryCode">Country Code</label>
+            <input class="app-input app-input--mono" type="text" id="fieldCountryCode" name="countryCode" placeholder="e.g. IND" maxlength="3"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldIssueDate">Date of Issue</label>
+            <input class="app-input" type="text" id="fieldIssueDate" name="issueDate" placeholder="DD/MM/YYYY"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldExpiryDate">Date of Expiry</label>
+            <input class="app-input" type="text" id="fieldExpiryDate" name="expiryDate" placeholder="DD/MM/YYYY"/>
+          </div>
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldPlaceOfIssue">Place of Issue</label>
+            <input class="app-input" type="text" id="fieldPlaceOfIssue" name="placeOfIssue" placeholder="e.g. LUCKNOW"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── Family Details (from back page) ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Family Details
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group">
+            <label class="app-label" for="fieldFatherName">Father's / Legal Guardian's Name</label>
+            <input class="app-input" type="text" id="fieldFatherName" name="fatherName" placeholder="Full name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldMotherName">Mother's Name</label>
+            <input class="app-input" type="text" id="fieldMotherName" name="motherName" placeholder="Full name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldSpouseName">Spouse's Name <span class="app-label-opt">(optional)</span></label>
+            <input class="app-input" type="text" id="fieldSpouseName" name="spouseName" placeholder="Full name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldFileNo">File Number</label>
+            <input class="app-input app-input--mono" type="text" id="fieldFileNo" name="fileNo" placeholder="e.g. LK2068200715223"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── Address ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          Address
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldAddress">Permanent Address</label>
+            <textarea class="app-input app-textarea" id="fieldAddress" name="address" rows="3" placeholder="Enter full address as shown on passport back page"></textarea>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldCity">City / District</label>
+            <input class="app-input" type="text" id="fieldCity" name="city" placeholder="e.g. Haridwar"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldState">State</label>
+            <input class="app-input" type="text" id="fieldState" name="state" placeholder="e.g. Uttarakhand"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldPin">PIN Code</label>
+            <input class="app-input app-input--mono" type="text" id="fieldPin" name="pin" placeholder="e.g. 247667" maxlength="10"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldCountry">Country</label>
+            <input class="app-input" type="text" id="fieldCountry" name="country" placeholder="e.g. India" value="India"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── MRZ ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M7 15h4M7 11h10M7 8h10"/>
+          </svg>
+          Machine Readable Zone (MRZ)
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldMrz1">MRZ Line 1</label>
+            <input class="app-input app-input--mono app-input--mrz" type="text" id="fieldMrz1" name="mrz1" placeholder="P<INDKUMAR<<ASHISH<<<<<<<<<<<<<<<<<<<<<<<<<<" maxlength="44"/>
+          </div>
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldMrz2">MRZ Line 2</label>
+            <input class="app-input app-input--mono app-input--mrz" type="text" id="fieldMrz2" name="mrz2" placeholder="Y6978513<9IND0401227M3307238200682007152239" maxlength="44"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Declaration -->
+      <div class="app-declaration">
+        <label class="app-checkbox-label">
+          <input type="checkbox" id="appDeclaration" class="app-checkbox" required/>
+          <span class="app-checkbox-box" aria-hidden="true"></span>
+          <span>I confirm that the above details are accurate and match my original passport. I consent to processing this data for identity verification.</span>
+        </label>
+      </div>
+
+      <!-- Actions -->
+      <div class="app-form-actions">
+        <button type="button" class="app-cancel-btn" id="appCancelBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15,18 9,12 15,6"/>
+          </svg>
+          Back to Crop
+        </button>
+        <button type="submit" class="app-submit-btn" id="appSubmitBtn">
+          Submit Verification
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9,18 15,12 9,6"/>
+          </svg>
+        </button>
+      </div>
+
+    </form>
+
+    <!-- Security footer -->
+    <p class="app-form-footer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      256-bit SSL encrypted · Data is never stored permanently
+    </p>
+
+  </div>
+</div>
+
 <script src="scanner.js"></script>
 </body>
 </html>

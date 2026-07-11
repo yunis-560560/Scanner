@@ -253,13 +253,58 @@ window.addEventListener('DOMContentLoaded', () => {
   dom.torchBtn.addEventListener('click', toggleTorch);
   dom.transContinueBtn.addEventListener('click', startBackScan);
   dom.successContinueBtn.addEventListener('click', () => {
-    // In a real app this navigates to next step
+    // Show the passport application form with captured passport images
+    const appFormScreen = document.getElementById('appFormScreen');
+    const appThumbFront = document.getElementById('appThumbFront');
+    const appThumbBack  = document.getElementById('appThumbBack');
+
+    // Populate thumbnails from captured images
+    if (appThumbFront && state.capturedFront) appThumbFront.src = state.capturedFront;
+    if (appThumbBack  && state.capturedBack)  appThumbBack.src  = state.capturedBack;
+
     dom.successScreen.style.display = 'none';
-    dom.desktopView.style.display = 'flex';
-    // Update desktop stepper to step 3 complete
-    completeDeskStep3();
+    if (appFormScreen) {
+      appFormScreen.style.display = 'block';
+      appFormScreen.scrollTop = 0;
+    }
   });
-  
+
+  // Back to Crop — from form header button
+  const appBackBtn = document.getElementById('appBackBtn');
+  if (appBackBtn) {
+    appBackBtn.addEventListener('click', goBackToCropFromForm);
+  }
+
+  // Back to Crop — from form bottom cancel button
+  const appCancelBtn = document.getElementById('appCancelBtn');
+  if (appCancelBtn) {
+    appCancelBtn.addEventListener('click', goBackToCropFromForm);
+  }
+
+  // Form submit
+  const passportDetailsForm = document.getElementById('passportDetailsForm');
+  if (passportDetailsForm) {
+    passportDetailsForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const declaration = document.getElementById('appDeclaration');
+      if (!declaration || !declaration.checked) {
+        declaration && declaration.closest('.app-declaration').classList.add('shake');
+        setTimeout(() => declaration && declaration.closest('.app-declaration').classList.remove('shake'), 500);
+        return;
+      }
+      const btn = document.getElementById('appSubmitBtn');
+      if (btn) {
+        btn.textContent = 'Submitting…';
+        btn.disabled = true;
+      }
+      // Simulate submission — in a real app this POSTs to your server
+      setTimeout(() => {
+        alert('✅ Passport verification submitted successfully!');
+        if (btn) { btn.textContent = 'Submit Verification'; btn.disabled = false; }
+      }, 1200);
+    });
+  }
+
   // Wire crop actions
   dom.cropConfirmBtn.addEventListener('click', confirmCropAdjustment);
   dom.cropResetBtn.addEventListener('click', resetCropCorners);
@@ -987,7 +1032,23 @@ function completeDeskStep3() {
 }
 
 /* ============================================================
-   TORCH TOGGLE
+   GO BACK TO CROP FROM APPLICATION FORM
+   Hides the app form and re-opens the crop screen so the
+   user can re-adjust the crop before re-submitting.
+   ============================================================ */
+function goBackToCropFromForm() {
+  const appFormScreen = document.getElementById('appFormScreen');
+  if (appFormScreen) appFormScreen.style.display = 'none';
+
+  // Re-open the crop screen with the last captured raw image
+  if (state.cropImageSrc) {
+    openCropScreen(state.cropImageSrc, state.cropImageSize.w, state.cropImageSize.h);
+  } else {
+    // No crop data — fall back to success screen
+    dom.successScreen.style.display = 'flex';
+  }
+}
+
    ============================================================ */
 async function toggleTorch() {
   if (!state.stream) return;
