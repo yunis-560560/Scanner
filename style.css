@@ -762,6 +762,245 @@ a {
   }
 }
 
+/* ================================================================
+   DEVICE-SPECIFIC VISIBILITY
+   desktop-only  → hidden on mobile/tablet
+   mobile-only   → hidden on desktop/laptop
+   desktop-qr-flow  → the QR code section
+   mobile-direct-flow → the Scan+Upload section
+   ================================================================ */
+
+/* Default: desktop — show desktop elements, hide mobile elements */
+.desktop-only   { display: flex; }
+.mobile-only    { display: none; }
+.desktop-qr-flow { display: block; }
+.mobile-direct-flow { display: none; }
+
+/* When body has .is-mobile → flip the above */
+body.is-mobile .desktop-only    { display: none !important; }
+body.is-mobile .mobile-only     { display: flex !important; }
+body.is-mobile .desktop-qr-flow { display: none !important; }
+body.is-mobile .mobile-direct-flow { display: block !important; }
+
+/* On mobile, make the grid single-column so the action card takes full width */
+body.is-mobile .dsk-grid {
+  grid-template-columns: 1fr;
+}
+
+/* Hide the desktop step indicator / waiting-for-device chip on mobile */
+body.is-mobile .dsk-stepper,
+body.is-mobile .dsk-waiting {
+  display: none;
+}
+
+/* ================================================================
+   MOBILE ACTION CARD — Scan Passport + Upload Passport
+   ================================================================ */
+.mob-action-card {
+  width: 100%;
+}
+
+/* Stack of two big action buttons */
+.mob-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 22px;
+}
+
+/* Shared button base */
+.mob-scan-btn,
+.mob-upload-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.22s var(--ease);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scan button — primary filled */
+.mob-scan-btn {
+  background: linear-gradient(135deg, var(--d-accent), #1d4ed8);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(26, 86, 219, 0.35);
+  margin-bottom: 14px;
+}
+
+.mob-scan-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0);
+  transition: background 0.2s;
+}
+
+.mob-scan-btn:hover::before,
+.mob-scan-btn:focus-visible::before {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mob-scan-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(26, 86, 219, 0.45);
+}
+
+.mob-scan-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(26, 86, 219, 0.3);
+}
+
+/* Upload button — outlined / ghost */
+.mob-upload-btn {
+  background: var(--d-surface);
+  color: var(--d-accent);
+  border: 2px solid var(--d-accent);
+  box-shadow: 0 2px 8px rgba(26, 86, 219, 0.08);
+}
+
+.mob-upload-btn:hover {
+  background: var(--d-accent-bg);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(26, 86, 219, 0.15);
+}
+
+.mob-upload-btn:active {
+  transform: translateY(0);
+}
+
+/* Icon wrapper */
+.mob-btn-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mob-scan-btn .mob-btn-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.mob-upload-btn .mob-btn-icon {
+  background: var(--d-accent-bg);
+  color: var(--d-accent);
+}
+
+/* Text block */
+.mob-btn-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mob-btn-label {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.mob-scan-btn .mob-btn-label {
+  color: #fff;
+}
+
+.mob-upload-btn .mob-btn-label {
+  color: var(--d-text-1);
+}
+
+.mob-btn-desc {
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.mob-scan-btn .mob-btn-desc {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.mob-upload-btn .mob-btn-desc {
+  color: var(--d-text-3);
+}
+
+/* Chevron arrow */
+.mob-btn-arrow {
+  flex-shrink: 0;
+  transition: transform 0.2s var(--ease);
+}
+
+.mob-scan-btn .mob-btn-arrow {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mob-upload-btn .mob-btn-arrow {
+  color: var(--d-text-3);
+}
+
+.mob-scan-btn:hover .mob-btn-arrow,
+.mob-upload-btn:hover .mob-btn-arrow {
+  transform: translateX(4px);
+}
+
+/* "or" divider between buttons */
+.mob-actions-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--d-text-3);
+  font-size: 0.78rem;
+}
+
+.mob-actions-divider::before,
+.mob-actions-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--d-border);
+}
+
+/* Tips row */
+.mob-tips-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--d-bg);
+  border: 1px solid var(--d-border-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.mob-tip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--d-text-2);
+  white-space: nowrap;
+}
+
+.mob-tip svg {
+  color: var(--d-accent);
+  flex-shrink: 0;
+}
+
+/* Security note override (already styled as .dsk-security-note) */
+.mob-security-note {
+  margin-bottom: 0;
+}
 
 /* ================================================================
    MOBILE CAMERA VIEW
@@ -2050,20 +2289,51 @@ a {
 }
 
 @keyframes animScene1 {
-  0%, 30% { opacity: 1; }
-  33%, 100% { opacity: 0; }
+
+  0%,
+  30% {
+    opacity: 1;
+  }
+
+  33%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes animScene2 {
-  0%, 30% { opacity: 0; }
-  33%, 63% { opacity: 1; }
-  66%, 100% { opacity: 0; }
+
+  0%,
+  30% {
+    opacity: 0;
+  }
+
+  33%,
+  63% {
+    opacity: 1;
+  }
+
+  66%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes animScene3 {
-  0%, 63% { opacity: 0; }
-  66%, 96% { opacity: 1; }
-  100% { opacity: 0; }
+
+  0%,
+  63% {
+    opacity: 0;
+  }
+
+  66%,
+  96% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 /* Scene 1: Passport entering frame animation */
@@ -2073,9 +2343,21 @@ a {
 }
 
 @keyframes movePassport {
-  0% { transform: translate(15px, 20px) scale(0.85); opacity: 0; }
-  30%, 80% { transform: translate(0, 0) scale(1); opacity: 1; }
-  100% { transform: translate(0, 0) scale(1); opacity: 0; }
+  0% {
+    transform: translate(15px, 20px) scale(0.85);
+    opacity: 0;
+  }
+
+  30%,
+  80% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
 }
 
 /* Scene 2: Upload Arrow bounce animation */
@@ -2085,8 +2367,15 @@ a {
 }
 
 @keyframes bounceUpload {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 /* Scene 3: Drag pointer movement animation */
@@ -2096,9 +2385,21 @@ a {
 }
 
 @keyframes dragPointer {
-  0%, 20% { transform: translate(0, 0); }
-  60%, 80% { transform: translate(-25px, -18px); }
-  100% { transform: translate(-25px, -18px); opacity: 0; }
+
+  0%,
+  20% {
+    transform: translate(0, 0);
+  }
+
+  60%,
+  80% {
+    transform: translate(-25px, -18px);
+  }
+
+  100% {
+    transform: translate(-25px, -18px);
+    opacity: 0;
+  }
 }
 
 .demo-tap-pulse {
@@ -2106,6 +2407,13 @@ a {
 }
 
 @keyframes pulseTap {
-  0% { r: 3; opacity: 1; }
-  100% { r: 15; opacity: 0; }
+  0% {
+    r: 3;
+    opacity: 1;
+  }
+
+  100% {
+    r: 15;
+    opacity: 0;
+  }
 }

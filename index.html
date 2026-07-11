@@ -88,7 +88,7 @@
     </nav>
 
     <!-- Info Banner -->
-    <div class="dsk-banner" role="note">
+    <div class="dsk-banner desktop-only" role="note">
       <div class="dsk-banner-icon" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="5" y="2" width="14" height="20" rx="2"/>
@@ -99,12 +99,22 @@
         You will need your <strong>mobile phone</strong> to complete passport verification
       </p>
     </div>
+    <div class="dsk-banner mobile-only" role="note">
+      <div class="dsk-banner-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <p class="dsk-banner-text">
+        Scan or upload your <strong>passport</strong> to complete identity verification
+      </p>
+    </div>
 
     <!-- Content Grid -->
     <div class="dsk-grid">
 
-      <!-- QR Code Card -->
-      <section class="dsk-card dsk-qr-card" aria-labelledby="qrCardTitle">
+      <!-- QR Code Card — Desktop Only -->
+      <section class="dsk-card dsk-qr-card desktop-qr-flow" aria-labelledby="qrCardTitle">
         <div class="dsk-card-eyebrow">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -173,6 +183,91 @@
           </svg>
           Open Passport Scanner
         </button>
+      </section>
+
+      <!-- Mobile Direct Flow Card — Mobile/Tablet Only -->
+      <section class="dsk-card mob-action-card mobile-direct-flow" aria-labelledby="mobCardTitle">
+        <div class="dsk-card-eyebrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="2" width="18" height="20" rx="3"/>
+            <circle cx="12" cy="9" r="3"/>
+            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+          </svg>
+          Passport Verification
+        </div>
+
+        <h2 class="dsk-card-title" id="mobCardTitle">Verify Your Passport</h2>
+        <p class="dsk-card-sub">Use your device's camera to scan your passport, or upload an existing photo from your gallery.</p>
+
+        <!-- Mobile action buttons -->
+        <div class="mob-actions">
+          <button class="mob-scan-btn" id="mobOpenScannerBtn" aria-label="Open camera to scan passport">
+            <div class="mob-btn-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <div class="mob-btn-text">
+              <span class="mob-btn-label">Scan Passport</span>
+              <span class="mob-btn-desc">Use back camera for best quality</span>
+            </div>
+            <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9,18 15,12 9,6"/>
+            </svg>
+          </button>
+
+          <div class="mob-actions-divider"><span>or</span></div>
+
+          <button class="mob-upload-btn" id="mobUploadPassportBtn" aria-label="Upload passport image from gallery">
+            <div class="mob-btn-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+              </svg>
+            </div>
+            <div class="mob-btn-text">
+              <span class="mob-btn-label">Upload Passport</span>
+              <span class="mob-btn-desc">Choose from gallery or files</span>
+            </div>
+            <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9,18 15,12 9,6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Tips -->
+        <div class="mob-tips-row">
+          <div class="mob-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            Good lighting
+          </div>
+          <div class="mob-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2"/>
+            </svg>
+            Hold from edges
+          </div>
+          <div class="mob-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="2" width="18" height="20" rx="3"/>
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            All corners visible
+          </div>
+        </div>
+
+        <div class="dsk-security-note mob-security-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Images are end-to-end encrypted and never stored permanently.
+        </div>
       </section>
 
       <!-- Info / Tips Card -->

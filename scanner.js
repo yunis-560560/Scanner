@@ -209,11 +209,45 @@ function iconFocus()     { return makeSVG('<circle cx="12" cy="12" r="3"/><path 
 function iconCheck()     { return makeSVG('<polyline points="20,6 9,17 4,12"/>'); }
 
 /* ============================================================
+   DEVICE DETECTION
+   Primary: CSS media query (viewport width < 1024px)
+   Secondary: User-Agent + touch point hints
+   Adds 'is-mobile' or 'is-desktop' to document.body.
+   Works reliably with DevTools emulation, real phones & tablets.
+   ============================================================ */
+function detectAndApplyDeviceClass() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  const isMobileUA = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet|silk/i.test(ua);
+  const isTouchDevice = navigator.maxTouchPoints > 0;
+
+  // Primary: width-based (CSS breakpoint) — most reliable across all envs
+  const isNarrowViewport = window.innerWidth < 1024;
+
+  // Classify as mobile if: narrow viewport OR (mobile UA + touch device)
+  const isMobile = isNarrowViewport || (isMobileUA && isTouchDevice);
+
+  document.body.classList.toggle('is-mobile', isMobile);
+  document.body.classList.toggle('is-desktop', !isMobile);
+  return isMobile;
+}
+
+/* Live re-evaluate on resize/orientation change */
+window.addEventListener('resize', () => {
+  detectAndApplyDeviceClass();
+});
+
+/* ============================================================
    INIT
    ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
-  drawQRCode();
-  startQRCountdown();
+  const isMobile = detectAndApplyDeviceClass();
+
+  // QR code and countdown only make sense on desktop
+  if (!isMobile) {
+    drawQRCode();
+    startQRCountdown();
+  }
+
   dom.openScannerBtn.addEventListener('click', openMobileScanner);
   dom.closeMobileBtn.addEventListener('click', closeMobileScanner);
   dom.torchBtn.addEventListener('click', toggleTorch);
@@ -234,7 +268,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Wire Shutter / Capture button
   dom.shutterBtn.addEventListener('click', triggerCapture);
 
-  // Wire upload buttons
+  // Wire desktop upload buttons
   if (dom.uploadPassportBtn && dom.passportFileInput) {
     dom.uploadPassportBtn.addEventListener('click', () => {
       state.phase = 'FRONT_SCAN';
@@ -248,6 +282,22 @@ window.addEventListener('DOMContentLoaded', () => {
     dom.transUploadBtn.addEventListener('click', () => {
       state.phase = 'BACK_SCAN';
       dom.passportFileInput.value = ''; // Reset file input
+      dom.passportFileInput.click();
+    });
+  }
+
+  // Wire mobile-direct-flow buttons
+  const mobScanBtn = document.getElementById('mobOpenScannerBtn');
+  const mobUploadBtn = document.getElementById('mobUploadPassportBtn');
+
+  if (mobScanBtn) {
+    mobScanBtn.addEventListener('click', openMobileScanner);
+  }
+
+  if (mobUploadBtn && dom.passportFileInput) {
+    mobUploadBtn.addEventListener('click', () => {
+      state.phase = 'FRONT_SCAN';
+      dom.passportFileInput.value = '';
       dom.passportFileInput.click();
     });
   }

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mobile View Preview — Passport Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f172a; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; gap: 32px; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; letter-spacing: -0.02em; }
+    .frames { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+    .frame { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .frame-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; }
+    .frame-label span { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.68rem; }
+    .frame-label .desktop-tag { background: rgba(26,86,219,0.2); color: #60a5fa; }
+    .frame-label .mobile-tag  { background: rgba(0,200,83,0.15); color: #4ade80; }
+    .device-frame { border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); }
+    .device-frame iframe { display: block; border: none; }
+
+    /* Desktop frame */
+    .desktop-frame .device-frame { width: 900px; height: 560px; }
+    .desktop-frame iframe { width: 900px; height: 560px; }
+
+    /* Mobile phone frame */
+    .mobile-frame .device-frame { width: 375px; height: 667px; border-radius: 36px; border: 8px solid #1e293b; box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 24px 60px rgba(0,0,0,0.7), inset 0 0 0 2px rgba(255,255,255,0.04); }
+    .mobile-frame iframe { width: 375px; height: 651px; }
+
+    .note { font-size: 0.8rem; color: #475569; text-align: center; max-width: 600px; line-height: 1.6; }
+    .note strong { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <h1>📱 Device-Specific View Preview</h1>
+
+  <div class="frames">
+    <!-- Desktop -->
+    <div class="frame desktop-frame">
+      <div class="frame-label"><span class="desktop-tag">🖥️ DESKTOP / LAPTOP</span></div>
+      <div class="device-frame">
+        <iframe src="index.html" title="Desktop View"></iframe>
+      </div>
+    </div>
+
+    <!-- Mobile — force is-mobile class via JS injection -->
+    <div class="frame mobile-frame">
+      <div class="frame-label"><span class="mobile-tag">📱 MOBILE / TABLET</span></div>
+      <div class="device-frame">
+        <iframe id="mobileFrame" src="index.html" title="Mobile View"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    <strong>Desktop</strong> shows the QR Code flow &nbsp;|&nbsp;
+    <strong>Mobile</strong> shows Scan Passport + Upload Passport buttons directly.<br>
+    The mobile view is simulated by injecting <code>is-mobile</code> class.
+  </p>
+
+  <script>
+    // Inject is-mobile class into the mobile iframe after it loads
+    const mobileFrame = document.getElementById('mobileFrame');
+    mobileFrame.addEventListener('load', () => {
+      try {
+        const iframeDoc = mobileFrame.contentDocument || mobileFrame.contentWindow.document;
+        iframeDoc.body.classList.remove('is-desktop');
+        iframeDoc.body.classList.add('is-mobile');
+      } catch (e) {
+        console.warn('Could not inject class into iframe (CORS):', e);
+      }
+    });
+  </script>
+</body>
+</html>
