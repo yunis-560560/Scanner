@@ -338,13 +338,23 @@ window.addEventListener('DOMContentLoaded', () => {
   if (mobScanBtn) {
     mobScanBtn.addEventListener('click', openMobileScanner);
   }
-
   if (mobUploadBtn && dom.passportFileInput) {
     mobUploadBtn.addEventListener('click', () => {
       state.phase = 'FRONT_SCAN';
       dom.passportFileInput.value = '';
       dom.passportFileInput.click();
     });
+  }
+
+  // Wire mock demo verification buttons
+  const mobMockDirectBtn = document.getElementById('mobMockDirectBtn');
+  const demoMockVerifyBtn = document.getElementById('demoMockVerifyBtn');
+
+  if (mobMockDirectBtn) {
+    mobMockDirectBtn.addEventListener('click', triggerMockVerification);
+  }
+  if (demoMockVerifyBtn) {
+    demoMockVerifyBtn.addEventListener('click', triggerMockVerification);
   }
 });
 
@@ -1719,4 +1729,93 @@ function warpPerspectiveJS(srcImgData, destImgData, h) {
     }
   }
 }
+
+
+/* ============================================================
+   MOCK DEMO FLOW AUTO-VERIFICATION
+   Triggered by "Direct Demo Flow" button on mobile card or
+   "Mock Verification" inside guide overlay.
+   Populates state with sample passport images, fills form inputs,
+   and skips directly to the Success/Verification Form views.
+   ============================================================ */
+function triggerMockVerification() {
+  console.info('⚡ Starting Mock Demo Verification Flow...');
+
+  // Reset/stop camera if active
+  stopCamera();
+  if (dom.mobileView) dom.mobileView.style.display = 'none';
+  if (dom.desktopView) dom.desktopView.style.display = 'none';
+  if (dom.scannerDemoOverlay) dom.scannerDemoOverlay.style.display = 'none';
+  if (state.demoTimerId) {
+    clearInterval(state.demoTimerId);
+    state.demoTimerId = null;
+  }
+
+  // Sample passport cropped images (using absolute URLs or placeholder dataURLs for the demo success screen thumbnails)
+  // We can use a clean data URL or a mock image from our directory
+  const mockFrontImage = 'https://yunis-560560.github.io/Scanner/sample_passport.png';
+  const mockBackImage  = 'https://yunis-560560.github.io/Scanner/sample_passport.png'; // fallback or similar
+
+  state.capturedFront = mockFrontImage;
+  state.capturedBack  = mockBackImage;
+  state.cropImageSrc  = mockFrontImage;
+  state.cropImageSize = { w: 1000, h: 636 };
+
+  // Fills all Form Input Fields with extracted details matching Ashish Kumar's sample passport
+  const fields = {
+    surname: 'KUMAR',
+    givenNames: 'ASHISH',
+    dob: '22/01/2004',
+    gender: 'M',
+    nationality: 'INDIAN',
+    placeOfBirth: 'AURAIYA, UTTAR PRADESH',
+    passportNo: 'Y6978513',
+    countryCode: 'IND',
+    issueDate: '24/07/2023',
+    expiryDate: '23/07/2033',
+    placeOfIssue: 'LUCKNOW',
+    fatherName: 'DHARMENDRA KUMAR PRAJAPATI',
+    motherName: 'NEERAJ PRAJAPATI',
+    spouseName: '',
+    fileNo: 'LK2068200715223',
+    address: 'ROOM NO.316, RADHAKRISHNAN BHAWAN, IIT ROORKEE, HARIDWAR, PIN:247667, UTTARAKHAND, INDIA',
+    city: 'Haridwar',
+    state: 'Uttarakhand',
+    pin: '247667',
+    country: 'India',
+    mrz1: 'P<INDKUMAR<<ASHISH<<<<<<<<<<<<<<<<<<<<<<<<<<',
+    mrz2: 'Y6978513<9IND0401227M3307238200682007152239'
+  };
+
+  // Populate HTML fields
+  for (const [idSuffix, value] of Object.entries(fields)) {
+    const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
+    const inputEl = document.getElementById(elId);
+    if (inputEl) {
+      inputEl.value = value;
+    }
+  }
+
+  // Check declaration checkbox
+  const decCheck = document.getElementById('appDeclaration');
+  if (decCheck) decCheck.checked = true;
+
+  // Render thumbnails on Success screen
+  if (dom.thumbFrontImg) dom.thumbFrontImg.src = mockFrontImage;
+  if (dom.thumbBackImg) {
+    dom.thumbBackImg.src = mockBackImage;
+    const backThumb = dom.thumbBackImg.closest('.success-thumb');
+    if (backThumb) backThumb.style.display = 'block'; // ensure visible
+  }
+
+  // Render thumbnails on Form screen
+  const appThumbFront = document.getElementById('appThumbFront');
+  const appThumbBack  = document.getElementById('appThumbBack');
+  if (appThumbFront) appThumbFront.src = mockFrontImage;
+  if (appThumbBack)  appThumbBack.src  = mockBackImage;
+
+  // Direct skip to Success Screen!
+  showSuccessScreen();
+}
+
 

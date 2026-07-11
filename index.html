@@ -232,6 +232,22 @@
               <polyline points="9,18 15,12 9,6"/>
             </svg>
           </button>
+
+          <!-- Quick Mock Demo verification button -->
+          <button class="mob-upload-btn" id="mobMockDirectBtn" style="border: 2px dashed #00C853; color: #00C853; background: transparent; margin-top: 14px;" aria-label="Quick demo simulation">
+            <div class="mob-btn-icon" style="color: #00C853; background: rgba(0, 200, 83, 0.08);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <div class="mob-btn-text">
+              <span class="mob-btn-label">⚡ Direct Demo Flow</span>
+              <span class="mob-btn-desc">Skip scan & check form directly</span>
+            </div>
+            <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: #00C853;">
+              <polyline points="9,18 15,12 9,6"/>
+            </svg>
+          </button>
         </div>
 
         <!-- Tips -->
@@ -412,7 +428,8 @@
         </svg>
       </div>
       
-      <div class="demo-footer">
+      <div class="demo-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="demo-skip-btn" id="demoMockVerifyBtn" style="background: rgba(0, 200, 83, 0.15); color: #4ade80; border: 1.5px solid rgba(74, 222, 128, 0.35); font-weight: 700;">⚡ Mock Verification</button>
         <button class="demo-skip-btn" id="demoSkipBtn">Skip (6s)</button>
       </div>
     </div>
