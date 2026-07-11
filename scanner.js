@@ -1043,12 +1043,11 @@ function goBackToCropFromForm() {
   // Re-open the crop screen with the last captured raw image
   if (state.cropImageSrc) {
     openCropScreen(state.cropImageSrc, state.cropImageSize.w, state.cropImageSize.h);
-  } else {
-    // No crop data — fall back to success screen
-    dom.successScreen.style.display = 'flex';
   }
 }
 
+/* ============================================================
+   TORCH TOGGLE
    ============================================================ */
 async function toggleTorch() {
   if (!state.stream) return;
