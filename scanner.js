@@ -1751,10 +1751,9 @@ function triggerMockVerification() {
     state.demoTimerId = null;
   }
 
-  // Sample passport cropped images (using absolute URLs or placeholder dataURLs for the demo success screen thumbnails)
-  // We can use a clean data URL or a mock image from our directory
-  const mockFrontImage = 'https://yunis-560560.github.io/Scanner/sample_passport.png';
-  const mockBackImage  = 'https://yunis-560560.github.io/Scanner/sample_passport.png'; // fallback or similar
+  // Sample passport cropped images (using relative paths for offline and local/server support)
+  const mockFrontImage = 'sample_passport.png';
+  const mockBackImage  = 'sample_passport.png';
 
   state.capturedFront = mockFrontImage;
   state.capturedBack  = mockBackImage;
