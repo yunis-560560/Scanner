@@ -53,6 +53,7 @@ const state = {
   cropImageSrc:   null,         // captured raw frame
   cropCorners:    { tl: {x:0, y:0}, tr: {x:0, y:0}, br: {x:0, y:0}, bl: {x:0, y:0} },
   cropImageSize:  { w: 0, h: 0 }, // raw image width and height
+  demoTimerId:    null,         // timer ID for the 6-second onboarding guide
 };
 
 /* ============================================================
@@ -64,11 +65,15 @@ const dom = {
   /* Desktop */
   desktopView:      $('desktopView'),
   openScannerBtn:   $('openScannerBtn'),
+  uploadPassportBtn: $('uploadPassportBtn'),
+  passportFileInput: $('passportFileInput'),
   qrImage:          $('qrImage'),
   qrCountdown:      $('qrCountdown'),
 
   /* Mobile view */
   mobileView:       $('mobileView'),
+  scannerDemoOverlay: $('scannerDemoOverlay'),
+  demoSkipBtn:       $('demoSkipBtn'),
   camVideo:         $('camVideo'),
   camCanvas:        $('camCanvas'),
   mobTopbar:        null, // not individually referenced
@@ -107,6 +112,7 @@ const dom = {
   /* Transition */
   transitionOverlay: $('transitionOverlay'),
   transContinueBtn:  $('transContinueBtn'),
+  transUploadBtn:    $('transUploadBtn'),
 
   /* Success */
   successScreen:    $('successScreen'),
@@ -227,6 +233,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Wire Shutter / Capture button
   dom.shutterBtn.addEventListener('click', triggerCapture);
+
+  // Wire upload buttons
+  if (dom.uploadPassportBtn && dom.passportFileInput) {
+    dom.uploadPassportBtn.addEventListener('click', () => {
+      state.phase = 'FRONT_SCAN';
+      dom.passportFileInput.value = ''; // Reset file input to allow uploading same image
+      dom.passportFileInput.click();
+    });
+    dom.passportFileInput.addEventListener('change', handlePassportFileUpload);
+  }
+
+  if (dom.transUploadBtn) {
+    dom.transUploadBtn.addEventListener('click', () => {
+      state.phase = 'BACK_SCAN';
+      dom.passportFileInput.value = ''; // Reset file input
+      dom.passportFileInput.click();
+    });
+  }
 });
 
 /* ============================================================
@@ -311,16 +335,71 @@ async function openMobileScanner() {
   setInstruction('fit_frame');
   setGuideState('default');
 
-  await startCamera();
+  // Show the 6-second animated guide onboarding demo overlay before starting the camera
+  showOnboardingGuide();
 }
 
 function closeMobileScanner() {
+  // Clear guide onboarding timer if active
+  if (state.demoTimerId) {
+    clearInterval(state.demoTimerId);
+    state.demoTimerId = null;
+  }
+  if (dom.scannerDemoOverlay) {
+    dom.scannerDemoOverlay.style.display = 'none';
+  }
+
   stopCamera();
   dom.mobileView.style.display = 'none';
   dom.desktopView.style.display = 'flex';
   document.body.style.overflow = '';
   state.phase = 'IDLE';
   resetDetectionState();
+}
+
+function showOnboardingGuide() {
+  if (!dom.scannerDemoOverlay || !dom.demoSkipBtn) {
+    // Fallback: start camera immediately if elements do not exist
+    startCamera();
+    return;
+  }
+
+  // Ensure camera is stopped during onboarding guide
+  stopCamera();
+
+  // Show overlay
+  dom.scannerDemoOverlay.style.display = 'flex';
+
+  let secsLeft = 6;
+  dom.demoSkipBtn.textContent = `Skip (${secsLeft}s)`;
+
+  // Reset timer
+  if (state.demoTimerId) {
+    clearInterval(state.demoTimerId);
+  }
+
+  const skipGuide = async () => {
+    if (state.demoTimerId) {
+      clearInterval(state.demoTimerId);
+      state.demoTimerId = null;
+    }
+    dom.scannerDemoOverlay.style.display = 'none';
+    await startCamera();
+  };
+
+  dom.demoSkipBtn.onclick = (e) => {
+    e.preventDefault();
+    skipGuide();
+  };
+
+  state.demoTimerId = setInterval(() => {
+    secsLeft--;
+    if (secsLeft <= 0) {
+      skipGuide();
+    } else {
+      dom.demoSkipBtn.textContent = `Skip (${secsLeft}s)`;
+    }
+  }, 1000);
 }
 
 /* ============================================================
@@ -947,6 +1026,34 @@ function openCropScreen(rawImageSrc, width, height) {
   };
 
   dom.cropScreen.style.display = 'flex';
+}
+
+/* ============================================================
+   FILE UPLOAD HANDLER
+   Reads and processes uploaded passport images
+   ============================================================ */
+function handlePassportFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const dataURL = event.target.result;
+    const img = new Image();
+    img.onload = function() {
+      // Hide desktop view and transition overlay
+      dom.desktopView.style.display = 'none';
+      dom.transitionOverlay.style.display = 'none';
+      
+      // Stop camera if running
+      stopCamera();
+      
+      // Open crop screen with the uploaded image and its dimensions
+      openCropScreen(dataURL, img.width, img.height);
+    };
+    img.src = dataURL;
+  };
+  reader.readAsDataURL(file);
 }
 
 /**

@@ -156,6 +156,16 @@
 
         <div class="dsk-divider" aria-hidden="true"><span>or demo on this screen</span></div>
 
+        <button class="dsk-upload-btn" id="uploadPassportBtn" aria-label="Upload passport image from file">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload Passport Image
+        </button>
+        <input type="file" id="passportFileInput" accept="image/*" style="display: none;" />
+
         <button class="dsk-open-btn" id="openScannerBtn" aria-label="Open passport scanner in this window">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -249,6 +259,72 @@
      MOBILE CAMERA VIEW — Full-screen camera interface
      ════════════════════════════════════════════════════════════ -->
 <div class="mobile-view" id="mobileView" style="display:none" role="dialog" aria-modal="true" aria-label="Passport scanner">
+
+  <!-- 6-Second Onboarding Guide Demo Overlay -->
+  <div class="demo-overlay" id="scannerDemoOverlay" style="display: none;">
+    <div class="demo-card">
+      <div class="demo-header">
+        <span class="demo-badge">QUICK GUIDE</span>
+        <h3 class="demo-title">How to Verify</h3>
+      </div>
+      
+      <div class="demo-animation-container">
+        <svg class="demo-svg" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background Frame -->
+          <rect x="10" y="10" width="180" height="130" rx="8" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+          
+          <!-- Scene 1: Scan / Align -->
+          <g class="demo-scene scene-scan">
+            <!-- Guide Box -->
+            <rect x="40" y="25" width="120" height="80" rx="6" fill="none" stroke="#64748b" stroke-dasharray="4 4" stroke-width="1.5"/>
+            <!-- Passport Card moving in -->
+            <g class="demo-passport-move">
+              <rect x="50" y="32" width="100" height="65" rx="4" fill="#0f172a" stroke="#00C853" stroke-width="2"/>
+              <rect x="60" y="42" width="20" height="25" rx="2" fill="#334155"/>
+              <line x1="90" y1="47" x2="130" y2="47" stroke="#334155" stroke-width="2"/>
+              <line x1="90" y1="57" x2="120" y2="57" stroke="#334155" stroke-width="2"/>
+              <line x1="90" y1="67" x2="135" y2="67" stroke="#334155" stroke-width="2"/>
+            </g>
+            <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">1. Align passport inside frame</text>
+          </g>
+          
+          <!-- Scene 2: Upload File -->
+          <g class="demo-scene scene-upload">
+            <g class="demo-upload-arrow">
+              <path d="M100 80 L100 45 M90 55 L100 45 L110 55" fill="none" stroke="#00C853" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="75" y="70" width="50" height="30" rx="3" fill="none" stroke="#334155" stroke-width="2"/>
+            </g>
+            <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">2. Or click "Upload Passport"</text>
+          </g>
+          
+          <!-- Scene 3: Adjust Corners -->
+          <g class="demo-scene scene-adjust">
+            <!-- Passport Card -->
+            <rect x="50" y="32" width="100" height="65" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+            <!-- Poly Overlay -->
+            <polygon points="55,37 145,39 142,89 58,92" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853" stroke-width="2"/>
+            <!-- Animated Finger & Corner snaps -->
+            <g class="demo-corners">
+              <circle cx="55" cy="37" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+              <circle cx="145" cy="39" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+              <circle cx="142" cy="89" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+              <circle cx="58" cy="92" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+            </g>
+            <g class="demo-finger">
+              <circle cx="142" cy="89" r="9" fill="rgba(0, 200, 83, 0.4)" class="demo-tap-pulse"/>
+              <!-- Hand/finger path -->
+              <path d="M142 89 L152 109 L162 105 Z" fill="#94a3b8"/>
+            </g>
+            <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">3. Drag corners to fit precisely</text>
+          </g>
+        </svg>
+      </div>
+      
+      <div class="demo-footer">
+        <button class="demo-skip-btn" id="demoSkipBtn">Skip (6s)</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Live camera video -->
   <video id="camVideo" autoplay playsinline muted class="cam-video" aria-hidden="true"></video>
@@ -392,6 +468,15 @@
         <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
       </svg>
       Scan Back Page Now
+    </button>
+
+    <button class="trans-btn-sec" id="transUploadBtn" aria-label="Upload back page of passport from file">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Upload Back Page
     </button>
   </div>
 </div>
