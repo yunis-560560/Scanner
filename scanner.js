@@ -949,6 +949,53 @@ function openCropScreen(rawImageSrc, width, height) {
   dom.cropScreen.style.display = 'flex';
 }
 
+/**
+ * Checks if a specific corner of the image contains bright document pixels (above adaptive threshold),
+ * indicating that the document extends directly to the edge of the image (no background margin visible).
+ */
+function isCornerFlush(imgData, corner, threshold) {
+  const w = imgData.width;
+  const h = imgData.height;
+  const data = imgData.data;
+
+  const checkW = Math.round(w * 0.15); // Check 15% of width
+  const checkH = Math.round(h * 0.15); // Check 15% of height
+
+  let startX = 0, endX = 0;
+  let startY = 0, endY = 0;
+
+  if (corner === 'tr') {
+    startX = w - checkW; endX = w;
+    startY = 0; endY = checkH;
+  } else if (corner === 'tl') {
+    startX = 0; endX = checkW;
+    startY = 0; endY = checkH;
+  } else if (corner === 'br') {
+    startX = w - checkW; endX = w;
+    startY = h - checkH; endY = h;
+  } else if (corner === 'bl') {
+    startX = 0; endX = checkW;
+    startY = h - checkH; endY = h;
+  }
+
+  let brightCount = 0;
+  let totalCount = 0;
+
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (luma > threshold) {
+        brightCount++;
+      }
+      totalCount++;
+    }
+  }
+
+  return (brightCount / totalCount) > 0.40;
+}
+
 function initCropUI() {
   const rect = dom.cropImgPreview.getBoundingClientRect();
   
@@ -965,6 +1012,7 @@ function initCropUI() {
 
   // Try auto corner detection and glare check
   let detected = null;
+  let trFlush = false;
   try {
     const canvas = document.createElement('canvas');
     // Using a low resolution (240x180) speeds up processing and filters out texture/text noise
@@ -980,6 +1028,19 @@ function initCropUI() {
     if (hasGlare && dom.cropGlareWarning) {
       dom.cropGlareWarning.style.display = 'flex';
     }
+
+    // Determine adaptive threshold for brightness
+    let sumLuma = 0;
+    const total = w * h;
+    const step = 4;
+    for (let i = 0; i < imgData.data.length; i += 4 * step) {
+      const r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
+      sumLuma += (0.299 * r + 0.587 * g + 0.114 * b);
+    }
+    const avgLuma = sumLuma / (total / step);
+    const threshold = Math.max(90, Math.min(180, avgLuma * 1.15));
+
+    trFlush = isCornerFlush(imgData, 'tr', threshold);
 
     const corners = detectDocumentCorners(imgData);
     if (corners) {
@@ -1009,6 +1070,11 @@ function initCropUI() {
       br: { x: rect.width - padX, y: rect.height - padY },
       bl: { x: padX, y: rect.height - padY }
     };
+  }
+
+  // Override top-right corner if it is flush against the edge (no background margin visible)
+  if (trFlush) {
+    state.cropCorners.tr = { x: rect.width, y: 0 };
   }
 
   updateCropPolygon();
