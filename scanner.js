@@ -261,6 +261,7 @@ window.addEventListener('DOMContentLoaded', () => {
   dom.reCropFrontBtn?.addEventListener('click', () => {
     if (state.rawFront) {
       state.reCropping = 'FRONT';
+      dom.successScreen.style.display = 'none';
       openCropScreen(state.rawFront, state.rawFrontSize?.w || 1000, state.rawFrontSize?.h || 636);
     }
   });
@@ -268,6 +269,7 @@ window.addEventListener('DOMContentLoaded', () => {
   dom.reCropBackBtn?.addEventListener('click', () => {
     if (state.rawBack) {
       state.reCropping = 'BACK';
+      dom.successScreen.style.display = 'none';
       openCropScreen(state.rawBack, state.rawBackSize?.w || 1000, state.rawBackSize?.h || 636);
     }
   });
