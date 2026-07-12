@@ -47,6 +47,9 @@ const state = {
   captured:       false,
   capturedFront:  null,
   capturedBack:   null,
+  rawFront:       null,
+  rawBack:        null,
+  reCropping:     null,         // 'FRONT' | 'BACK' | null
   prevEdgeMap:    null,         // for motion/steadiness detection
   qrTimerId:      null,
   qrSecsLeft:     QR_EXPIRE_SECS,
@@ -119,6 +122,9 @@ const dom = {
   thumbFrontImg:    $('thumbFrontImg'),
   thumbBackImg:     $('thumbBackImg'),
   successContinueBtn: $('successContinueBtn'),
+  reCropFrontBtn:   $('reCropFrontBtn'),
+  reCropBackBtn:    $('reCropBackBtn'),
+  successBackBtn:   $('successBackBtn'),
 
   /* Interactive Crop */
   cropScreen:       $('cropScreen'),
@@ -252,6 +258,26 @@ window.addEventListener('DOMContentLoaded', () => {
   dom.closeMobileBtn.addEventListener('click', closeMobileScanner);
   dom.torchBtn.addEventListener('click', toggleTorch);
   dom.transContinueBtn.addEventListener('click', startBackScan);
+  dom.reCropFrontBtn?.addEventListener('click', () => {
+    if (state.rawFront) {
+      state.reCropping = 'FRONT';
+      openCropScreen(state.rawFront, state.rawFrontSize?.w || 1000, state.rawFrontSize?.h || 636);
+    }
+  });
+
+  dom.reCropBackBtn?.addEventListener('click', () => {
+    if (state.rawBack) {
+      state.reCropping = 'BACK';
+      openCropScreen(state.rawBack, state.rawBackSize?.w || 1000, state.rawBackSize?.h || 636);
+    }
+  });
+
+  dom.successBackBtn?.addEventListener('click', () => {
+    dom.successScreen.style.display = 'none';
+    state.capturedBack = null;
+    startBackScan();
+  });
+
   dom.successContinueBtn.addEventListener('click', () => {
     // Show the passport application form with captured passport images
     const appFormScreen = document.getElementById('appFormScreen');
@@ -1127,6 +1153,14 @@ document.addEventListener('visibilitychange', () => {
    INTERACTIVE CROP & CORNER ADJUSTER
    ============================================================ */
 function openCropScreen(rawImageSrc, width, height) {
+  if (state.phase === 'FRONT_SCAN' && !state.reCropping) {
+    state.rawFront = rawImageSrc;
+    state.rawFrontSize = { w: width, h: height };
+  } else if (state.phase === 'BACK_SCAN' && !state.reCropping) {
+    state.rawBack = rawImageSrc;
+    state.rawBackSize = { w: width, h: height };
+  }
+
   state.cropImageSrc = rawImageSrc;
   state.cropImageSize = { w: width, h: height };
   
@@ -1425,17 +1459,29 @@ function setHandlePos(el, pos) {
 }
 
 async function resetCropCorners() {
-  // Hide crop screen
   dom.cropScreen.style.display = 'none';
-  
-  // Reset capture status
   state.captured = false;
   state.holdStart = null;
   state.confidence = 0;
-  
-  // Re-open mobile camera view and start camera streaming
-  dom.mobileView.style.display = 'flex';
-  await startCamera();
+
+  if (state.reCropping === 'FRONT') {
+    state.reCropping = null;
+    state.capturedFront = null;
+    state.phase = 'FRONT_SCAN';
+    dom.mobileView.style.display = 'flex';
+    setMobSideUI('front');
+    await startCamera();
+  } else if (state.reCropping === 'BACK') {
+    state.reCropping = null;
+    state.capturedBack = null;
+    state.phase = 'BACK_SCAN';
+    dom.mobileView.style.display = 'flex';
+    setMobSideUI('back');
+    await startCamera();
+  } else {
+    dom.mobileView.style.display = 'flex';
+    await startCamera();
+  }
 }
 
 /* ============================================================
@@ -1623,7 +1669,17 @@ function confirmCropAdjustment() {
       // Close crop overlay screen and advance scan state
       dom.cropScreen.style.display = 'none';
 
-      if (state.phase === 'FRONT_SCAN') {
+      if (state.reCropping === 'FRONT') {
+        state.capturedFront = flattenedDataURL;
+        state.reCropping = null;
+        triggerMockOCR();
+        updateSuccessScreenState();
+      } else if (state.reCropping === 'BACK') {
+        state.capturedBack = flattenedDataURL;
+        state.reCropping = null;
+        triggerMockOCR();
+        updateSuccessScreenState();
+      } else if (state.phase === 'FRONT_SCAN') {
         state.capturedFront = flattenedDataURL;
         state.phase = 'TRANSITION';
         showTransitionOverlay();
@@ -1760,7 +1816,17 @@ function triggerMockVerification() {
   state.cropImageSrc  = mockFrontImage;
   state.cropImageSize = { w: 1000, h: 636 };
 
-  // Fills all Form Input Fields with extracted details matching Ashish Kumar's sample passport
+  state.rawFront      = mockFrontImage;
+  state.rawBack       = mockBackImage;
+  state.rawFrontSize  = { w: 1000, h: 636 };
+  state.rawBackSize   = { w: 1000, h: 636 };
+
+  triggerMockOCR();
+  updateSuccessScreenState();
+  showSuccessScreen();
+}
+
+function triggerMockOCR() {
   const fields = {
     surname: 'KUMAR',
     givenNames: 'ASHISH',
@@ -1786,7 +1852,6 @@ function triggerMockVerification() {
     mrz2: 'Y6978513<9IND0401227M3307238200682007152239'
   };
 
-  // Populate HTML fields
   for (const [idSuffix, value] of Object.entries(fields)) {
     const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
     const inputEl = document.getElementById(elId);
@@ -1795,26 +1860,32 @@ function triggerMockVerification() {
     }
   }
 
-  // Check declaration checkbox
   const decCheck = document.getElementById('appDeclaration');
   if (decCheck) decCheck.checked = true;
+}
 
-  // Render thumbnails on Success screen
-  if (dom.thumbFrontImg) dom.thumbFrontImg.src = mockFrontImage;
-  if (dom.thumbBackImg) {
-    dom.thumbBackImg.src = mockBackImage;
+function updateSuccessScreenState() {
+  if (dom.thumbFrontImg && state.capturedFront) dom.thumbFrontImg.src = state.capturedFront;
+  if (dom.thumbBackImg && state.capturedBack) {
+    dom.thumbBackImg.src = state.capturedBack;
     const backThumb = dom.thumbBackImg.closest('.success-thumb');
-    if (backThumb) backThumb.style.display = 'block'; // ensure visible
+    if (backThumb) backThumb.style.display = 'block';
   }
 
-  // Render thumbnails on Form screen
   const appThumbFront = document.getElementById('appThumbFront');
   const appThumbBack  = document.getElementById('appThumbBack');
-  if (appThumbFront) appThumbFront.src = mockFrontImage;
-  if (appThumbBack)  appThumbBack.src  = mockBackImage;
+  if (appThumbFront && state.capturedFront) appThumbFront.src = state.capturedFront;
+  if (appThumbBack && state.capturedBack)  appThumbBack.src  = state.capturedBack;
 
-  // Direct skip to Success Screen!
-  showSuccessScreen();
+  if (dom.successContinueBtn) {
+    if (state.capturedFront && state.capturedBack) {
+      dom.successContinueBtn.disabled = false;
+      dom.successContinueBtn.style.opacity = '1';
+    } else {
+      dom.successContinueBtn.disabled = true;
+      dom.successContinueBtn.style.opacity = '0.5';
+    }
+  }
 }
 
 

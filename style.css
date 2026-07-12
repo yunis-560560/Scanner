@@ -771,16 +771,38 @@ a {
    ================================================================ */
 
 /* Default: desktop — show desktop elements, hide mobile elements */
-.desktop-only   { display: flex; }
-.mobile-only    { display: none; }
-.desktop-qr-flow { display: block; }
-.mobile-direct-flow { display: none; }
+.desktop-only {
+  display: flex;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.desktop-qr-flow {
+  display: block;
+}
+
+.mobile-direct-flow {
+  display: none;
+}
 
 /* When body has .is-mobile → flip the above */
-body.is-mobile .desktop-only    { display: none !important; }
-body.is-mobile .mobile-only     { display: flex !important; }
-body.is-mobile .desktop-qr-flow { display: none !important; }
-body.is-mobile .mobile-direct-flow { display: block !important; }
+body.is-mobile .desktop-only {
+  display: none !important;
+}
+
+body.is-mobile .mobile-only {
+  display: flex !important;
+}
+
+body.is-mobile .desktop-qr-flow {
+  display: none !important;
+}
+
+body.is-mobile .mobile-direct-flow {
+  display: block !important;
+}
 
 /* On mobile, make the grid single-column so the action card takes full width */
 body.is-mobile .dsk-grid {
@@ -1851,6 +1873,58 @@ body.is-mobile .dsk-waiting {
   padding: 4px 14px;
 }
 
+.success-recrop-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--d-text-2);
+  background: var(--d-surface);
+  border: 1px solid var(--d-border);
+  border-radius: var(--radius-full);
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  margin-top: -4px;
+}
+
+.success-recrop-btn:hover {
+  border-color: var(--d-accent);
+  color: var(--d-accent);
+  background: var(--d-accent-bg);
+}
+
+.success-actions-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.success-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 24px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--d-border);
+  background: var(--d-surface);
+  color: var(--d-text-1);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.22s var(--ease);
+  cursor: pointer;
+}
+
+.success-back-btn:hover {
+  border-color: var(--d-text-1);
+  background: var(--d-bg);
+}
+
 /* Success button */
 .success-btn {
   display: flex;
@@ -2502,7 +2576,8 @@ body.is-mobile .dsk-waiting {
   border: 1px solid var(--d-border);
   box-shadow: var(--d-shadow-sm);
   object-fit: cover;
-  aspect-ratio: 85 / 54; /* Standard passport aspect ratio */
+  aspect-ratio: 85 / 54;
+  /* Standard passport aspect ratio */
   background: var(--d-bg);
 }
 
@@ -2701,13 +2776,13 @@ body.is-mobile .dsk-waiting {
   position: relative;
 }
 
-.app-checkbox:checked + .app-checkbox-box {
+.app-checkbox:checked+.app-checkbox-box {
   background: var(--d-accent);
   border-color: var(--d-accent);
   box-shadow: 0 2px 8px rgba(26, 86, 219, 0.3);
 }
 
-.app-checkbox:checked + .app-checkbox-box::after {
+.app-checkbox:checked+.app-checkbox-box::after {
   content: '';
   width: 10px;
   height: 6px;
@@ -2717,7 +2792,7 @@ body.is-mobile .dsk-waiting {
   display: block;
 }
 
-.app-checkbox:focus-visible + .app-checkbox-box {
+.app-checkbox:focus-visible+.app-checkbox-box {
   outline: 2px solid var(--d-accent);
   outline-offset: 2px;
 }
