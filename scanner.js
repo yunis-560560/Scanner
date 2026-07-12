@@ -1923,8 +1923,11 @@ async function extractPassportData(imageData) {
     const text = ret.data.text;
     await worker.terminate();
 
+    // Clean lines by removing spaces and standardizing to uppercase
     const lines = text.split('\n').map(l => l.replace(/\s/g, '').toUpperCase());
-    const mrzLines = lines.filter(l => l.includes('<') && l.length > 30);
+    
+    // MRZ lines are typically exactly 44 chars. We look for lines > 35 chars that contain common MRZ characters.
+    const mrzLines = lines.filter(l => l.length > 35 && (l.includes('<') || /^[A-Z0-9]+$/.test(l.replace(/</g, ''))));
     
     if (mrzLines.length < 2) {
       alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
@@ -1937,6 +1940,8 @@ async function extractPassportData(imageData) {
     
     let surname = '';
     let givenNames = '';
+    // MRZ 1 format: P<IND[SURNAME]<<[GIVEN NAMES]
+    // The surname starts at index 5 and ends at the first '<<'.
     const namePart = mrz1.substring(5).split('<<');
     if (namePart.length > 0) surname = namePart[0].replace(/</g, ' ').trim();
     if (namePart.length > 1) givenNames = namePart[1].replace(/</g, ' ').trim();
@@ -1947,7 +1952,7 @@ async function extractPassportData(imageData) {
     const gender = mrz2.substring(20, 21);
     const expRaw = mrz2.substring(21, 27);
     
-    const visibleText = text.replace(mrz1, '').replace(mrz2, '');
+    const visibleText = text.toUpperCase();
 
     // Validation
     if (!surname || !passportNo || passportNo.length < 5) {
@@ -1956,7 +1961,10 @@ async function extractPassportData(imageData) {
        return;
     }
 
-    const surnameValid = visibleText.includes(surname);
+    // Check if the extracted surname exists in the general passport text (excluding the MRZ lines to be strict)
+    // We remove the MRZ lines from the search space to ensure it matches the upper visual fields.
+    const textWithoutMRZ = visibleText.replace(mrz1, '').replace(mrz2, '');
+    const surnameValid = textWithoutMRZ.includes(surname);
     
     if (!surnameValid) {
        alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
