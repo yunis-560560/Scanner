@@ -1887,6 +1887,14 @@ function triggerMockVerification() {
 }
 
 function resetOCRState() {
+  // Clear all web storage and cookies
+  localStorage.clear();
+  sessionStorage.clear();
+  document.cookie.split(";").forEach((c) => {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+  });
+
+  // Clear all form fields
   const fields = ['surname', 'givenNames', 'dob', 'gender', 'nationality', 'placeOfBirth', 'passportNo', 'countryCode', 'issueDate', 'expiryDate', 'placeOfIssue', 'fatherName', 'motherName', 'spouseName', 'fileNo', 'address', 'city', 'state', 'pin', 'country', 'mrz1', 'mrz2'];
   for (const idSuffix of fields) {
     const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
@@ -1896,6 +1904,7 @@ function resetOCRState() {
   const decCheck = document.getElementById('appDeclaration');
   if (decCheck) decCheck.checked = false;
   
+  // Clear in-memory state
   state.capturedFront = null;
   state.capturedBack = null;
   state.rawFront = null;
@@ -1918,7 +1927,7 @@ async function extractPassportData(imageData) {
     const mrzLines = lines.filter(l => l.includes('<') && l.length > 30);
     
     if (mrzLines.length < 2) {
-      alert("Passport data could not be verified. Please scan or upload the passport again.");
+      alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
       if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
       return;
     }
@@ -1940,8 +1949,9 @@ async function extractPassportData(imageData) {
     
     const visibleText = text.replace(mrz1, '').replace(mrz2, '');
 
+    // Validation
     if (!surname || !passportNo || passportNo.length < 5) {
-       alert("Passport data could not be verified. Please scan or upload the passport again.");
+       alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
        if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
        return;
     }
@@ -1949,7 +1959,7 @@ async function extractPassportData(imageData) {
     const surnameValid = visibleText.includes(surname);
     
     if (!surnameValid) {
-       alert("Passport data could not be verified. Please scan or upload the passport again.");
+       alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
        if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
        return;
     }
@@ -1988,7 +1998,7 @@ async function extractPassportData(imageData) {
 
   } catch (err) {
     console.error("OCR Error:", err);
-    alert("Passport data could not be verified. Please scan or upload the passport again.");
+    alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
     if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
   }
 }
