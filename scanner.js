@@ -1742,7 +1742,11 @@ function confirmCropAdjustment() {
         state.phase = 'SUCCESS';
         stopCamera();
         dom.mobileView.style.display = 'none';
-        extractPassportData(state.capturedFront);
+        extractPassportData(state.capturedFront).then(() => {
+          if (state.capturedBack) {
+            extractBackPageData(state.capturedBack);
+          }
+        });
       }
     };
   }, 50);
@@ -1945,26 +1949,28 @@ async function extractPassportData(imageData) {
        return `${yymmdd.substring(4,6)}/${yymmdd.substring(2,4)}/${y}`;
     };
 
-    const countryMap = {
-      'IND': 'INDIAN',
-      'USA': 'AMERICAN',
-      'GBR': 'BRITISH',
-      'CAN': 'CANADIAN',
-      'AUS': 'AUSTRALIAN'
-    };
-
     const parsedData = {
       surname: surname,
       givenNames: givenNames,
       passportNo: passportNo,
       countryCode: nat,
-      nationality: countryMap[nat] || nat,
+      nationality: nat === 'IND' ? 'INDIAN' : nat,
       dob: formatMRZDate(dobRaw),
       expiryDate: formatMRZDate(expRaw),
       gender: gender,
       mrz1: mrz1,
       mrz2: mrz2
     };
+
+    // Attempt full text extraction for front page fields
+    const placeOfBirthMatch = visibleText.match(/PLACE\s*OF\s*BIRTH[\s\S]*?\n\s*([A-Z\s,]+)\n/);
+    if (placeOfBirthMatch) parsedData.placeOfBirth = placeOfBirthMatch[1].trim();
+
+    const placeOfIssueMatch = visibleText.match(/PLACE\s*OF\s*ISSUE[\s\S]*?\n\s*([A-Z\s]+)\n/);
+    if (placeOfIssueMatch) parsedData.placeOfIssue = placeOfIssueMatch[1].trim();
+
+    const issueDateMatch = visibleText.match(/DATE\s*OF\s*ISSUE[\s\S]*?(\d{2}\/\d{2}\/\d{4})/);
+    if (issueDateMatch) parsedData.issueDate = issueDateMatch[1];
 
     for (const [idSuffix, value] of Object.entries(parsedData)) {
       const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
@@ -1987,6 +1993,64 @@ async function extractPassportData(imageData) {
     console.error("OCR Error:", err);
     alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
     if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+  }
+}
+
+async function extractBackPageData(imageData) {
+  try {
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = true;
+      dom.successContinueBtn.textContent = 'Extracting Back Page Data...';
+    }
+
+    const worker = await Tesseract.createWorker('eng');
+    const ret = await worker.recognize(imageData);
+    const text = ret.data.text.toUpperCase();
+    await worker.terminate();
+
+    const parsedData = {};
+
+    const fatherMatch = text.match(/LEGAL\s*GUARDIAN'S\s*NAME[\s\S]*?\n\s*([A-Z\s]+)\n/);
+    if (fatherMatch) parsedData.fatherName = fatherMatch[1].trim();
+
+    const motherMatch = text.match(/MOTHER(?:'S)?\s*NAME[\s\S]*?\n\s*([A-Z\s]+)\n/);
+    if (motherMatch) parsedData.motherName = motherMatch[1].trim();
+
+    const spouseMatch = text.match(/SPOUSE(?:'S)?\s*NAME[\s\S]*?\n\s*([A-Z\s]+)\n/);
+    if (spouseMatch) parsedData.spouseName = spouseMatch[1].trim();
+
+    const addressMatch = text.match(/ADDRESS[\s\S]*?\n([\s\S]*?)(?:PIN|$)/);
+    if (addressMatch) {
+      parsedData.address = addressMatch[1].replace(/\n/g, ', ').trim();
+      const pinMatch = text.match(/PIN\s*[:\-]?\s*(\d{6})/);
+      if (pinMatch) parsedData.pin = pinMatch[1];
+    }
+    
+    const fileNoMatch = text.match(/FILE\s*NO[\s\S]*?([A-Z0-9]{15})/);
+    if (fileNoMatch) parsedData.fileNo = fileNoMatch[1];
+
+    for (const [idSuffix, value] of Object.entries(parsedData)) {
+      const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
+      const inputEl = document.getElementById(elId);
+      if (inputEl && value) inputEl.value = value;
+    }
+
+    updateSuccessScreenState();
+    showSuccessScreen();
+
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = false;
+      dom.successContinueBtn.innerHTML = `Continue to Application <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>`;
+    }
+
+  } catch (err) {
+    console.error("OCR Back Page Error:", err);
+    updateSuccessScreenState();
+    showSuccessScreen();
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = false;
+      dom.successContinueBtn.innerHTML = `Continue to Application <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>`;
+    }
   }
 }
 
