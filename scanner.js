@@ -1676,11 +1676,13 @@ function confirmCropAdjustment() {
         state.reCropping = null;
         triggerMockOCR();
         updateSuccessScreenState();
+        showSuccessScreen();
       } else if (state.reCropping === 'BACK') {
         state.capturedBack = flattenedDataURL;
         state.reCropping = null;
         triggerMockOCR();
         updateSuccessScreenState();
+        showSuccessScreen();
       } else if (state.phase === 'FRONT_SCAN') {
         state.capturedFront = flattenedDataURL;
         state.phase = 'TRANSITION';
