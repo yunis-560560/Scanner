@@ -78,6 +78,7 @@ const dom = {
   scannerDemoOverlay: $('scannerDemoOverlay'),
   demoSkipBtn:       $('demoSkipBtn'),
   camVideo:         $('camVideo'),
+  glareOverlayCanvas: $('glareOverlayCanvas'),
   camCanvas:        $('camCanvas'),
   mobTopbar:        null, // not individually referenced
 
@@ -88,6 +89,7 @@ const dom = {
   closeMobileBtn:   $('closeMobileBtn'),
 
   /* Instruction */
+  glareCriticalWarning: $('glareCriticalWarning'),
   mobInstruction:   $('mobInstruction'),
   mobInstrIcon:     $('mobInstrIcon'),
   mobInstrText:     $('mobInstrText'),
@@ -185,6 +187,10 @@ const INSTRUCTIONS = {
   hold_almost: {
     text: 'Hold steady…',
     icon: iconSteady(),
+  },
+  overexposed: {
+    text: 'Too bright. Move away from direct light.',
+    icon: iconGlare(),
   },
   detected: {
     text: 'Passport detected successfully',
@@ -626,6 +632,28 @@ function analyzeAndUpdate() {
   const imageData = ctx.getImageData(0, 0, sw, sh);
   const analysis  = computeAnalysis(imageData.data, sw, sh);
 
+  // Draw glare highlights on the overlay canvas
+  if (dom.glareOverlayCanvas) {
+    const glCanvas = dom.glareOverlayCanvas;
+    if (glCanvas.width !== vw || glCanvas.height !== vh) {
+      glCanvas.width = vw;
+      glCanvas.height = vh;
+    }
+    const glCtx = glCanvas.getContext('2d');
+    glCtx.clearRect(0, 0, vw, vh);
+    if (analysis.overexposed && analysis.glarePoints && analysis.glarePoints.length > 0) {
+      glCtx.fillStyle = 'rgba(239, 68, 68, 0.45)'; // semi-transparent red
+      glCtx.beginPath();
+      for (const pt of analysis.glarePoints) {
+        // map sampled coords back to full video coords
+        const fullX = sx + pt.x;
+        const fullY = sy + pt.y;
+        glCtx.arc(fullX, fullY, 4, 0, Math.PI * 2);
+      }
+      glCtx.fill();
+    }
+  }
+
   updateDetection(analysis);
 }
 
@@ -639,6 +667,7 @@ function computeAnalysis(data, w, h) {
   const luma = new Float32Array(w * h);
   const total = w * h;
 
+  const glarePoints = [];
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
@@ -646,7 +675,13 @@ function computeAnalysis(data, w, h) {
       const l = 0.299 * r + 0.587 * g + 0.114 * b;
       luma[y * w + x] = l;
       brightnessSum += l;
-      if (l > 230) glareCount++;
+      if (l > 240) {
+        glareCount++;
+        // Sample glare points for drawing (don't push every single pixel to save memory/time)
+        if (x % step === 0 && y % step === 0) {
+          glarePoints.push({ x, y });
+        }
+      }
     }
   }
 
@@ -717,6 +752,9 @@ function computeAnalysis(data, w, h) {
     ? 1 - Math.abs(fillRatio - 0.55) * 1.5
     : 0.15;
 
+  // Overexposed detection flag
+  const isOverexposed = (glareRatio > 0.035) || (avgBrightness > 195 && avgEdge < 15);
+
   // Overall confidence
   const raw = Math.max(0, Math.min(1,
     brightScore  * 0.28 +
@@ -736,6 +774,8 @@ function computeAnalysis(data, w, h) {
     glareRatio,
     fillRatio,
     confidence: state.confidence,
+    overexposed: isOverexposed,
+    glarePoints,
   };
 }
 
@@ -744,7 +784,9 @@ function computeAnalysis(data, w, h) {
    Picks the most relevant guidance based on analysis metrics
    ============================================================ */
 function selectInstruction(a) {
-  const { confidence, brightness, edgeDensity, steadiness, glareRatio, fillRatio } = a;
+  const { confidence, brightness, edgeDensity, steadiness, glareRatio, fillRatio, overexposed } = a;
+
+  if (overexposed) return 'overexposed';
 
   // High priority: critical issues
   if (confidence < 0.18) return 'fit_frame';
@@ -786,8 +828,19 @@ function selectInstruction(a) {
 function updateDetection(analysis) {
   if (state.captured) return;
 
-  const conf     = analysis.confidence;
+  // If overexposed, artificially clamp confidence so it never captures
+  let conf = analysis.confidence;
+  const isOverexposed = analysis.overexposed;
+  if (isOverexposed) {
+    conf = Math.min(conf, 0.5); // block capture
+  }
+
   const instrKey = selectInstruction(analysis);
+
+  // Toggle Critical Glare Warning Banner
+  if (dom.glareCriticalWarning) {
+    dom.glareCriticalWarning.style.display = isOverexposed ? 'flex' : 'none';
+  }
 
   // Update confidence bar
   dom.mobDetectFill.style.width = `${Math.round(conf * 100)}%`;
@@ -815,8 +868,8 @@ function updateDetection(analysis) {
   // Set instruction text
   setInstruction(instrKey);
 
-  // Auto-capture logic: Must exceed capture confidence and hold
-  if (conf >= CONF_CAPTURE && !state.captured) {
+  // Auto-capture logic: Must exceed capture confidence and hold (blocked if overexposed)
+  if (conf >= CONF_CAPTURE && !state.captured && !isOverexposed) {
     if (!state.holdStart) {
       state.holdStart = Date.now();
     } else if (Date.now() - state.holdStart >= HOLD_DURATION_MS) {

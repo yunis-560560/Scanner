@@ -436,7 +436,11 @@
   </div>
 
   <!-- Live camera video -->
-  <video id="camVideo" autoplay playsinline muted class="cam-video" aria-hidden="true"></video>
+  <video class="cam-video" id="camVideo" autoplay playsinline muted></video>
+
+  <!-- Glare Overlay Canvas for drawing red highlights -->
+  <canvas id="glareOverlayCanvas" class="glare-overlay-canvas"></canvas>
+
   <!-- Hidden canvas for frame capture -->
   <canvas id="camCanvas" style="display:none" aria-hidden="true"></canvas>
 
@@ -462,6 +466,20 @@
 
   <!-- Central scan area (guide + instruction + status) -->
   <div class="mob-scan-area" id="mobScanArea">
+
+    <!-- Critical Glare/Overexposure Warning -->
+    <div class="glare-critical-warning" id="glareCriticalWarning" style="display:none" role="alert">
+      <div class="glare-warning-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="glare-warning-text">
+        Passport image quality is too bright or contains glare. We cannot accurately read your passport. Please move away from direct light, reduce reflections, adjust the passport angle, and scan again.
+      </div>
+    </div>
 
     <!-- Instruction pill — appears above the guide -->
     <div class="mob-instruction" id="mobInstruction" role="status" aria-live="polite" aria-atomic="true">
