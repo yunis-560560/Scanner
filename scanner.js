@@ -1727,13 +1727,10 @@ function confirmCropAdjustment() {
       if (state.reCropping === 'FRONT') {
         state.capturedFront = flattenedDataURL;
         state.reCropping = null;
-        triggerMockOCR();
-        updateSuccessScreenState();
-        showSuccessScreen();
+        extractPassportData(state.capturedFront);
       } else if (state.reCropping === 'BACK') {
         state.capturedBack = flattenedDataURL;
         state.reCropping = null;
-        triggerMockOCR();
         updateSuccessScreenState();
         showSuccessScreen();
       } else if (state.phase === 'FRONT_SCAN') {
@@ -1745,9 +1742,7 @@ function confirmCropAdjustment() {
         state.phase = 'SUCCESS';
         stopCamera();
         dom.mobileView.style.display = 'none';
-        triggerMockOCR();
-        updateSuccessScreenState();
-        showSuccessScreen();
+        extractPassportData(state.capturedFront);
       }
     };
   }, 50);
@@ -1880,47 +1875,110 @@ function triggerMockVerification() {
   state.rawFrontSize  = { w: 1000, h: 636 };
   state.rawBackSize   = { w: 1000, h: 636 };
 
-  triggerMockOCR();
-  updateSuccessScreenState();
-  showSuccessScreen();
+  extractPassportData(state.capturedFront);
 }
 
-function triggerMockOCR() {
-  const fields = {
-    surname: 'SHAIK',
-    givenNames: 'MOHAMMAD YUNIS',
-    dob: '20/11/2001',
-    gender: 'M',
-    nationality: 'INDIAN',
-    placeOfBirth: 'ATMAKUR, ANDHRA PRADESH',
-    passportNo: 'AE471374',
-    countryCode: 'IND',
-    issueDate: '23/07/2025',
-    expiryDate: '22/07/2035',
-    placeOfIssue: 'VIJAYAWADA',
-    fatherName: 'FAREED BASHA SHAIK',
-    motherName: 'BEEBJAN SHAIK',
-    spouseName: '',
-    fileNo: 'VJ6065266422725',
-    address: '2-202-1A, JR PETA, ATMAKUR, SRI POTTI SRIRAMULU NELLORE, PIN:524322, ANDHRA PRADESH, INDIA',
-    city: 'Atmakur',
-    state: 'Andhra Pradesh',
-    pin: '524322',
-    country: 'India',
-    mrz1: 'P<INDSHAIK<<MOHAMMAD<YUNIS<<<<<<<<<<<<<<<<<<',
-    mrz2: 'AE471374<2IND0111207M35072236065266422725<34'
-  };
-
-  for (const [idSuffix, value] of Object.entries(fields)) {
-    const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
-    const inputEl = document.getElementById(elId);
-    if (inputEl) {
-      inputEl.value = value;
+async function extractPassportData(imageData) {
+  try {
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = true;
+      dom.successContinueBtn.textContent = 'Extracting Data...';
     }
-  }
 
-  const decCheck = document.getElementById('appDeclaration');
-  if (decCheck) decCheck.checked = true;
+    const worker = await Tesseract.createWorker('eng');
+    const ret = await worker.recognize(imageData);
+    const text = ret.data.text;
+    await worker.terminate();
+
+    // Clean lines by removing spaces and standardizing to uppercase
+    const lines = text.split('\n').map(l => l.replace(/\s/g, '').toUpperCase());
+    
+    // MRZ lines are typically exactly 44 chars. We look for lines > 35 chars that contain common MRZ characters.
+    const mrzLines = lines.filter(l => l.length > 35 && (l.includes('<') || /^[A-Z0-9]+$/.test(l.replace(/</g, ''))));
+    
+    if (mrzLines.length < 2) {
+      alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
+      if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+      return;
+    }
+    
+    const mrz1 = mrzLines[mrzLines.length - 2];
+    const mrz2 = mrzLines[mrzLines.length - 1];
+    
+    let surname = '';
+    let givenNames = '';
+    // MRZ 1 format: P<IND[SURNAME]<<[GIVEN NAMES]
+    // The surname starts at index 5 and ends at the first '<<'.
+    const namePart = mrz1.substring(5).split('<<');
+    if (namePart.length > 0) surname = namePart[0].replace(/</g, ' ').trim();
+    if (namePart.length > 1) givenNames = namePart[1].replace(/</g, ' ').trim();
+    
+    const passportNo = mrz2.substring(0, 9).replace(/</g, '');
+    const nat = mrz2.substring(10, 13);
+    const dobRaw = mrz2.substring(13, 19);
+    const gender = mrz2.substring(20, 21);
+    const expRaw = mrz2.substring(21, 27);
+    
+    const visibleText = text.toUpperCase();
+
+    // Validation
+    if (!surname || !passportNo || passportNo.length < 5) {
+       alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
+       if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+       return;
+    }
+
+    // Check if the extracted surname exists in the general passport text (excluding the MRZ lines to be strict)
+    // We remove the MRZ lines from the search space to ensure it matches the upper visual fields.
+    const textWithoutMRZ = visibleText.replace(mrz1, '').replace(mrz2, '');
+    const surnameValid = textWithoutMRZ.includes(surname);
+    
+    if (!surnameValid) {
+       alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
+       if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+       return;
+    }
+
+    const formatMRZDate = (yymmdd) => {
+       const yr = parseInt(yymmdd.substring(0,2));
+       const y = yr > 50 ? 1900 + yr : 2000 + yr;
+       return `${yymmdd.substring(4,6)}/${yymmdd.substring(2,4)}/${y}`;
+    };
+
+    const parsedData = {
+      surname: surname,
+      givenNames: givenNames,
+      passportNo: passportNo,
+      countryCode: nat,
+      dob: formatMRZDate(dobRaw),
+      expiryDate: formatMRZDate(expRaw),
+      gender: gender === 'M' ? 'Male (M)' : gender === 'F' ? 'Female (F)' : gender,
+      mrz1: mrz1,
+      mrz2: mrz2
+    };
+
+    for (const [idSuffix, value] of Object.entries(parsedData)) {
+      const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
+      const inputEl = document.getElementById(elId);
+      if (inputEl) inputEl.value = value;
+    }
+    
+    const decCheck = document.getElementById('appDeclaration');
+    if (decCheck) decCheck.checked = true;
+
+    updateSuccessScreenState();
+    showSuccessScreen();
+
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = false;
+      dom.successContinueBtn.innerHTML = `Continue to Application <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>`;
+    }
+
+  } catch (err) {
+    console.error("OCR Error:", err);
+    alert("We couldn't accurately read this passport. Please scan or upload a clearer image.");
+    if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+  }
 }
 
 function updateSuccessScreenState() {
