@@ -1908,32 +1908,61 @@ async function extractPassportData(frontImage, backImage) {
       const cleanLines = frontText.split('\n').map(l => l.replace(/\s/g, '').toUpperCase());
       const mrzLines = cleanLines.filter(l => l.length > 35 && (l.includes('<') || /^[A-Z0-9]+$/.test(l.replace(/</g, ''))));
       
+      let allDates = [];
+      const dateRegex = /\b\d{2}\/\d{2}\/\d{4}\b/g;
+      let match;
+      while ((match = dateRegex.exec(frontText)) !== null) {
+         allDates.push(match[0]);
+      }
+      
+      // Sort dates chronologically
+      allDates.sort((a, b) => {
+         const d1 = new Date(a.split('/').reverse().join('-'));
+         const d2 = new Date(b.split('/').reverse().join('-'));
+         return d1 - d2;
+      });
+
       if (mrzLines.length >= 2) {
-        const mrz1 = mrzLines[mrzLines.length - 2];
-        const mrz2 = mrzLines[mrzLines.length - 1];
+        let mrz1 = mrzLines[mrzLines.length - 2];
+        let mrz2 = mrzLines[mrzLines.length - 1];
+        
+        // Clean MRZ (Tesseract often reads < as K, L, or S)
+        mrz1 = mrz1.replace(/[KLS]{2,}/g, m => '<'.repeat(m.length));
+        mrz2 = mrz2.replace(/[KLS]{2,}/g, m => '<'.repeat(m.length));
         
         const namePart = mrz1.substring(5).split('<<');
         if (namePart.length > 0) parsedData.surname = namePart[0].replace(/</g, ' ').trim();
         if (namePart.length > 1) parsedData.givenNames = namePart[1].replace(/</g, ' ').trim();
         
-        parsedData.passportNo = mrz2.substring(0, 9).replace(/</g, '');
-        parsedData.countryCode = mrz2.substring(10, 13);
-        const dobRaw = mrz2.substring(13, 19);
-        const gender = mrz2.substring(20, 21);
-        const expRaw = mrz2.substring(21, 27);
+        // Use regex for MRZ2 to avoid strict index shifting issues
+        const passMatch = mrz2.match(/^[A-Z0-9<]{1}([A-Z0-9]{7,8})</);
+        if (passMatch) parsedData.passportNo = passMatch[1].replace(/</g, '');
+        else parsedData.passportNo = mrz2.substring(0, 9).replace(/</g, '');
         
-        const formatMRZDate = (yymmdd) => {
-           const yr = parseInt(yymmdd.substring(0,2));
-           const y = yr > 50 ? 1900 + yr : 2000 + yr;
-           return `${yymmdd.substring(4,6)}/${yymmdd.substring(2,4)}/${y}`;
-        };
-
-        parsedData.dob = formatMRZDate(dobRaw);
-        parsedData.expiryDate = formatMRZDate(expRaw);
+        // Country code is usually 3 chars after the first < in the numeric section
+        const countryMatch = mrz2.match(/<([A-Z]{3})/);
+        if (countryMatch) parsedData.countryCode = countryMatch[1];
+        else parsedData.countryCode = mrz2.substring(10, 13);
+        
+        const genderMatch = mrz2.match(/[MF<]/g);
+        // Find gender character near the middle
+        const genderChar = genderMatch ? genderMatch.find(c => c === 'M' || c === 'F') : null;
+        const gender = genderChar || mrz2.substring(20, 21);
         parsedData.gender = gender === 'M' ? 'M' : gender === 'F' ? 'F' : gender;
         parsedData.mrz1 = mrz1;
         parsedData.mrz2 = mrz2;
         parsedData.nationality = parsedData.countryCode === 'IND' ? 'INDIAN' : parsedData.countryCode;
+      }
+      
+      // Assign dates reliably from sorted array
+      if (allDates.length >= 3) {
+         parsedData.dob = allDates[0];
+         parsedData.issueDate = allDates[1];
+         parsedData.expiryDate = allDates[2];
+      } else if (allDates.length > 0) {
+         // Fallback if not all 3 dates were found
+         parsedData.dob = allDates[0];
+         if (allDates.length === 2) parsedData.expiryDate = allDates[1];
       }
 
       // Other Front Page Fields
@@ -1945,7 +1974,7 @@ async function extractPassportData(frontImage, backImage) {
         if (upperLine.includes('PLACE OF BIRTH') || upperLine.includes('BIRTH')) {
           if (!parsedData.placeOfBirth && i + 1 < lines.length) {
              const val = lines[i+1].replace(/[^a-zA-Z\s,]/g, '').trim();
-             if (val.length > 3 && !val.includes('SEX')) parsedData.placeOfBirth = val;
+             if (val.length > 3 && !val.includes('SEX') && !val.match(/\d/)) parsedData.placeOfBirth = val;
           }
         }
         
@@ -1953,15 +1982,7 @@ async function extractPassportData(frontImage, backImage) {
         if ((upperLine.includes('PLACE OF ISSUE') || upperLine.includes('ISSUE')) && !upperLine.includes('DATE') && !parsedData.placeOfIssue) {
           if (i + 1 < lines.length) {
             const val = lines[i+1].replace(/[^a-zA-Z\s]/g, '').trim();
-            if (val.length > 3) parsedData.placeOfIssue = val;
-          }
-        }
-        
-        // Date of Issue
-        if (!parsedData.issueDate) {
-          const match = upperLine.match(/\d{2}\/\d{2}\/\d{4}/);
-          if (match && match[0] !== parsedData.dob && match[0] !== parsedData.expiryDate) {
-             parsedData.issueDate = match[0];
+            if (val.length > 3 && !val.match(/\d/)) parsedData.placeOfIssue = val;
           }
         }
       }
