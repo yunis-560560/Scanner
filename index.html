@@ -5,1049 +5,982 @@
 -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Passport Verification — Secure e-KYC Identity Check</title>
-  <meta name="description"
-    content="Secure passport verification using e-KYC technology. Scan both sides of your passport for instant identity verification." />
+  <meta name="description" content="Secure passport verification using e-KYC technology. Scan both sides of your passport for instant identity verification." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-  <!-- ════════════════════════════════════════════════════════════
+<!-- ════════════════════════════════════════════════════════════
      DESKTOP VIEW — Clean white e-KYC waiting screen
      ════════════════════════════════════════════════════════════ -->
-  <div class="desktop-view" id="desktopView">
+<div class="desktop-view" id="desktopView">
 
-    <!-- Header -->
-    <header class="dsk-header" role="banner">
-      <div class="dsk-header-inner">
-        <div class="dsk-brand">
-          <div class="dsk-brand-logo" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </div>
-          <span class="dsk-brand-name">SecureID</span>
-          <span class="dsk-brand-pill">e-KYC</span>
-        </div>
-        <div class="dsk-header-meta">
-          <div class="dsk-enc-badge" aria-label="256-bit encrypted session">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <rect x="3" y="11" width="18" height="11" rx="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            256-bit SSL
-          </div>
-          <span class="dsk-session-id">Session: <strong>KYC-2074-XK</strong></span>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main -->
-    <main class="dsk-main" role="main">
-
-      <!-- Step Indicator -->
-      <nav class="dsk-stepper" aria-label="Verification progress">
-        <div class="dsk-step dsk-step--done" id="dskStep1" aria-current="false">
-          <div class="dsk-step-circle" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="20,6 9,17 4,12" />
-            </svg>
-          </div>
-          <div class="dsk-step-meta">
-            <span class="dsk-step-num">Step 1</span>
-            <span class="dsk-step-label">Phone Linked</span>
-          </div>
-        </div>
-
-        <div class="dsk-step-connector dsk-step-connector--done" aria-hidden="true"></div>
-
-        <div class="dsk-step dsk-step--active" id="dskStep2" aria-current="step">
-          <div class="dsk-step-circle" aria-hidden="true">
-            <div class="dsk-step-ripple"></div>
-            <span>2</span>
-          </div>
-          <div class="dsk-step-meta">
-            <span class="dsk-step-num">Step 2</span>
-            <span class="dsk-step-label">Capture Started</span>
-          </div>
-        </div>
-
-        <div class="dsk-step-connector" aria-hidden="true"></div>
-
-        <div class="dsk-step" id="dskStep3" aria-current="false">
-          <div class="dsk-step-circle" aria-hidden="true"><span>3</span></div>
-          <div class="dsk-step-meta">
-            <span class="dsk-step-num">Step 3</span>
-            <span class="dsk-step-label">Capture Complete</span>
-          </div>
-        </div>
-      </nav>
-
-      <!-- Info Banner -->
-      <div class="dsk-banner desktop-only" role="note">
-        <div class="dsk-banner-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
+  <!-- Header -->
+  <header class="dsk-header" role="banner">
+    <div class="dsk-header-inner">
+      <div class="dsk-brand">
+        <div class="dsk-brand-logo" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
         </div>
-        <p class="dsk-banner-text">
-          You will need your <strong>mobile phone</strong> to complete passport verification
-        </p>
+        <span class="dsk-brand-name">SecureID</span>
+        <span class="dsk-brand-pill">e-KYC</span>
       </div>
-      <div class="dsk-banner mobile-only" role="note">
-        <div class="dsk-banner-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <div class="dsk-header-meta">
+        <div class="dsk-enc-badge" aria-label="256-bit encrypted session">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
+          256-bit SSL
         </div>
-        <p class="dsk-banner-text">
-          Scan or upload your <strong>passport</strong> to complete identity verification
-        </p>
-      </div>
-
-      <!-- Content Grid -->
-      <div class="dsk-grid">
-
-        <!-- QR Code Card — Desktop Only -->
-        <section class="dsk-card dsk-qr-card desktop-qr-flow" aria-labelledby="qrCardTitle">
-          <div class="dsk-card-eyebrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <path d="M14 14h3v3h-3z" />
-              <path d="M17 17h4v4h-4z" />
-              <path d="M14 17h3" />
-              <path d="M17 14v3" />
-            </svg>
-            Scan QR Code
-          </div>
-
-          <h2 class="dsk-card-title" id="qrCardTitle">Continue on Your Mobile Device</h2>
-          <p class="dsk-card-sub">Open your phone's camera and point it at the QR code to begin passport scanning on
-            your mobile device.</p>
-
-          <!-- QR visual -->
-          <div class="dsk-qr-block">
-            <div class="dsk-qr-frame">
-              <img id="qrImage" width="190" height="190" alt="QR Code — scan with your phone camera" />
-              <span class="dsk-qr-corner dsk-qr-corner--tl" aria-hidden="true"></span>
-              <span class="dsk-qr-corner dsk-qr-corner--tr" aria-hidden="true"></span>
-              <span class="dsk-qr-corner dsk-qr-corner--bl" aria-hidden="true"></span>
-              <span class="dsk-qr-corner dsk-qr-corner--br" aria-hidden="true"></span>
-            </div>
-            <p class="dsk-qr-expire">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12,6 12,12 16,14" />
-              </svg>
-              Expires in&nbsp;<span id="qrCountdown" aria-live="polite">05:00</span>
-            </p>
-
-          </div>
-
-          <!-- How to use steps -->
-          <ol class="dsk-qr-steps" aria-label="How to scan">
-            <li class="dsk-qr-step">
-              <span class="dsk-qr-num">1</span>
-              <span>Open the camera app on your phone</span>
-            </li>
-            <li class="dsk-qr-step">
-              <span class="dsk-qr-num">2</span>
-              <span>Point it at the QR code above</span>
-            </li>
-            <li class="dsk-qr-step">
-              <span class="dsk-qr-num">3</span>
-              <span>Follow the on-screen instructions</span>
-            </li>
-          </ol>
-
-          <div class="dsk-divider" aria-hidden="true"><span>or demo on this screen</span></div>
-
-          <button class="dsk-upload-btn" id="uploadPassportBtn" aria-label="Upload passport image from file">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            Upload Passport Image
-          </button>
-          <input type="file" id="passportFileInput" accept="image/*" style="display: none;" />
-
-          <button class="dsk-open-btn" id="openScannerBtn" aria-label="Open passport scanner in this window">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-              <circle cx="12" cy="13" r="4" />
-            </svg>
-            Open Passport Scanner
-          </button>
-        </section>
-
-        <!-- Mobile Direct Flow Card — Mobile/Tablet Only -->
-        <section class="dsk-card mob-action-card mobile-direct-flow" aria-labelledby="mobCardTitle">
-          <div class="dsk-card-eyebrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="2" width="18" height="20" rx="3" />
-              <circle cx="12" cy="9" r="3" />
-              <path d="M6 21v-1a6 6 0 0 1 12 0v1" />
-            </svg>
-            Passport Verification
-          </div>
-
-          <h2 class="dsk-card-title" id="mobCardTitle">Verify Your Passport</h2>
-          <p class="dsk-card-sub">Use your device's camera to scan your passport, or upload an existing photo from your
-            gallery.</p>
-
-          <!-- Mobile action buttons -->
-          <div class="mob-actions">
-            <button class="mob-scan-btn" id="mobOpenScannerBtn" aria-label="Open camera to scan passport">
-              <div class="mob-btn-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-              </div>
-              <div class="mob-btn-text">
-                <span class="mob-btn-label">Scan Passport</span>
-                <span class="mob-btn-desc">Use back camera for best quality</span>
-              </div>
-              <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2.5">
-                <polyline points="9,18 15,12 9,6" />
-              </svg>
-            </button>
-
-            <div class="mob-actions-divider"><span>or</span></div>
-
-            <button class="mob-upload-btn" id="mobUploadPassportBtn" aria-label="Upload passport image from gallery">
-              <div class="mob-btn-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21,15 16,10 5,21" />
-                </svg>
-              </div>
-              <div class="mob-btn-text">
-                <span class="mob-btn-label">Upload Passport</span>
-                <span class="mob-btn-desc">Choose from gallery or files</span>
-              </div>
-              <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2.5">
-                <polyline points="9,18 15,12 9,6" />
-              </svg>
-            </button>
-
-            <!-- Quick Mock Demo verification button -->
-            <button class="mob-upload-btn" id="mobMockDirectBtn"
-              style="border: 2px dashed #00C853; color: #00C853; background: transparent; margin-top: 14px;"
-              aria-label="Quick demo simulation">
-              <div class="mob-btn-icon" style="color: #00C853; background: rgba(0, 200, 83, 0.08);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-              </div>
-              <div class="mob-btn-text">
-                <span class="mob-btn-label">⚡ Direct Demo Flow</span>
-                <span class="mob-btn-desc">Skip scan & check form directly</span>
-              </div>
-              <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2.5" style="color: #00C853;">
-                <polyline points="9,18 15,12 9,6" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Tips -->
-          <div class="mob-tips-row">
-            <div class="mob-tip">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="5" />
-                <path
-                  d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-              </svg>
-              Good lighting
-            </div>
-            <div class="mob-tip">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2" />
-              </svg>
-              Hold from edges
-            </div>
-            <div class="mob-tip">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="2" width="18" height="20" rx="3" />
-                <polyline points="20,6 9,17 4,12" />
-              </svg>
-              All corners visible
-            </div>
-          </div>
-
-          <div class="dsk-security-note mob-security-note">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            Images are end-to-end encrypted and never stored permanently.
-          </div>
-        </section>
-
-        <!-- Info / Tips Card -->
-        <aside class="dsk-card dsk-info-card" aria-labelledby="infoCardTitle">
-          <h3 class="dsk-info-title" id="infoCardTitle">What you'll need</h3>
-
-          <ul class="dsk-needs-list" role="list">
-            <li class="dsk-needs-item">
-              <div class="dsk-needs-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <rect x="3" y="2" width="18" height="20" rx="3" />
-                  <circle cx="12" cy="9" r="3" />
-                  <path d="M6 21v-1a6 6 0 0 1 12 0v1" />
-                </svg>
-              </div>
-              <div>
-                <strong>Valid Passport</strong>
-                <p>Your original passport must be physically present and undamaged</p>
-              </div>
-            </li>
-            <li class="dsk-needs-item">
-              <div class="dsk-needs-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <rect x="5" y="2" width="14" height="20" rx="2" />
-                  <path d="M12 18h.01" />
-                </svg>
-              </div>
-              <div>
-                <strong>Phone with Camera</strong>
-                <p>Scan the QR code to open the scanner on your mobile device</p>
-              </div>
-            </li>
-            <li class="dsk-needs-item">
-              <div class="dsk-needs-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <circle cx="12" cy="12" r="5" />
-                  <path
-                    d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
-              </div>
-              <div>
-                <strong>Good Lighting</strong>
-                <p>A well-lit room ensures the clearest passport capture</p>
-              </div>
-            </li>
-          </ul>
-
-          <div class="dsk-tips-box">
-            <div class="dsk-tips-head">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2" />
-              </svg>
-              Tips for best results
-            </div>
-            <ul class="dsk-tips-list">
-              <li>Place passport on a flat, dark surface</li>
-              <li>Hold phone parallel to the passport</li>
-              <li>Ensure all four corners are visible</li>
-              <li>Avoid direct light or glare (especially on the passport number)</li>
-            </ul>
-          </div>
-
-          <div class="dsk-security-note">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            Images are end-to-end encrypted and never stored permanently.
-          </div>
-
-          <!-- Waiting indicator -->
-          <div class="dsk-waiting" id="dskWaiting" aria-live="polite" aria-label="Waiting for mobile device">
-            <div class="dsk-wait-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-            <span>Waiting for mobile device…</span>
-          </div>
-        </aside>
-
-      </div><!-- /dsk-grid -->
-    </main>
-  </div><!-- /desktop-view -->
-
-
-  <!-- ════════════════════════════════════════════════════════════
-     MOBILE CAMERA VIEW — Full-screen camera interface
-     ════════════════════════════════════════════════════════════ -->
-  <div class="mobile-view" id="mobileView" style="display:none" role="dialog" aria-modal="true"
-    aria-label="Passport scanner">
-
-    <!-- 6-Second Onboarding Guide Demo Overlay -->
-    <div class="demo-overlay" id="scannerDemoOverlay" style="display: none;">
-      <div class="demo-card">
-        <div class="demo-header">
-          <span class="demo-badge">QUICK GUIDE</span>
-          <h3 class="demo-title">How to Verify</h3>
-        </div>
-
-        <div class="demo-animation-container">
-          <svg class="demo-svg" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
-            <!-- Background Frame -->
-            <rect x="10" y="10" width="180" height="130" rx="8" fill="#1e293b" stroke="#334155" stroke-width="2" />
-
-            <!-- Scene 1: Scan / Align -->
-            <g class="demo-scene scene-scan">
-              <!-- Guide Box -->
-              <rect x="40" y="25" width="120" height="80" rx="6" fill="none" stroke="#64748b" stroke-dasharray="4 4"
-                stroke-width="1.5" />
-              <!-- Passport Card moving in -->
-              <g class="demo-passport-move">
-                <rect x="50" y="32" width="100" height="65" rx="4" fill="#0f172a" stroke="#00C853" stroke-width="2" />
-                <rect x="60" y="42" width="20" height="25" rx="2" fill="#334155" />
-                <line x1="90" y1="47" x2="130" y2="47" stroke="#334155" stroke-width="2" />
-                <line x1="90" y1="57" x2="120" y2="57" stroke="#334155" stroke-width="2" />
-                <line x1="90" y1="67" x2="135" y2="67" stroke="#334155" stroke-width="2" />
-              </g>
-              <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">1. Align
-                passport inside frame</text>
-            </g>
-
-            <!-- Scene 2: Upload File -->
-            <g class="demo-scene scene-upload">
-              <g class="demo-upload-arrow">
-                <path d="M100 80 L100 45 M90 55 L100 45 L110 55" fill="none" stroke="#00C853" stroke-width="3"
-                  stroke-linecap="round" stroke-linejoin="round" />
-                <rect x="75" y="70" width="50" height="30" rx="3" fill="none" stroke="#334155" stroke-width="2" />
-              </g>
-              <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">2. Or click
-                "Upload Passport"</text>
-            </g>
-
-            <!-- Scene 3: Adjust Corners -->
-            <g class="demo-scene scene-adjust">
-              <!-- Passport Card -->
-              <rect x="50" y="32" width="100" height="65" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1.5" />
-              <!-- Poly Overlay -->
-              <polygon points="55,37 145,39 142,89 58,92" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853"
-                stroke-width="2" />
-              <!-- Animated Finger & Corner snaps -->
-              <g class="demo-corners">
-                <circle cx="55" cy="37" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5" />
-                <circle cx="145" cy="39" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5" />
-                <circle cx="142" cy="89" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5" />
-                <circle cx="58" cy="92" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5" />
-              </g>
-              <g class="demo-finger">
-                <circle cx="142" cy="89" r="9" fill="rgba(0, 200, 83, 0.4)" class="demo-tap-pulse" />
-                <!-- Hand/finger path -->
-                <path d="M142 89 L152 109 L162 105 Z" fill="#94a3b8" />
-              </g>
-              <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">3. Drag corners
-                to fit precisely</text>
-            </g>
-          </svg>
-        </div>
-
-        <div class="demo-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
-          <button class="demo-skip-btn" id="demoMockVerifyBtn"
-            style="background: rgba(0, 200, 83, 0.15); color: #4ade80; border: 1.5px solid rgba(74, 222, 128, 0.35); font-weight: 700;">⚡
-            Mock Verification</button>
-          <button class="demo-skip-btn" id="demoSkipBtn">Skip (6s)</button>
-        </div>
+        <span class="dsk-session-id">Session: <strong>KYC-2074-XK</strong></span>
       </div>
     </div>
+  </header>
 
-    <!-- Live camera video -->
-    <video class="cam-video" id="camVideo" autoplay playsinline muted></video>
+  <!-- Main -->
+  <main class="dsk-main" role="main">
 
-    <!-- Glare Overlay Canvas for drawing red highlights -->
-    <canvas id="glareOverlayCanvas" class="glare-overlay-canvas"></canvas>
-
-    <!-- Hidden canvas for frame capture -->
-    <canvas id="camCanvas" style="display:none" aria-hidden="true"></canvas>
-
-    <!-- Top navigation bar -->
-    <div class="mob-topbar" role="navigation" aria-label="Scanner navigation">
-      <div class="mob-steps" aria-label="Scan progress" role="list">
-        <div class="mob-step mob-step--active" id="mobStep1" role="listitem">
-          <div class="mob-step-dot" aria-hidden="true"></div>
-          <span>Front</span>
-        </div>
-        <div class="mob-connector" id="mobConnector" aria-hidden="true"></div>
-        <div class="mob-step" id="mobStep2" role="listitem">
-          <div class="mob-step-dot" aria-hidden="true"></div>
-          <span>Back</span>
-        </div>
-      </div>
-      <button class="mob-close-btn" id="closeMobileBtn" aria-label="Close passport scanner">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Central scan area (guide + instruction + status) -->
-    <div class="mob-scan-area" id="mobScanArea">
-
-      <!-- Critical Glare/Overexposure Warning -->
-      <div class="glare-critical-warning" id="glareCriticalWarning" style="display:none" role="alert">
-        <div class="glare-warning-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
+    <!-- Step Indicator -->
+    <nav class="dsk-stepper" aria-label="Verification progress">
+      <div class="dsk-step dsk-step--done" id="dskStep1" aria-current="false">
+        <div class="dsk-step-circle" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20,6 9,17 4,12"/>
           </svg>
         </div>
-        <div class="glare-warning-text">
-          Passport image quality is too bright or contains glare. We cannot accurately read your passport. Please move
-          away from direct light, reduce reflections, adjust the passport angle, and scan again.
+        <div class="dsk-step-meta">
+          <span class="dsk-step-num">Step 1</span>
+          <span class="dsk-step-label">Phone Linked</span>
         </div>
       </div>
 
-      <!-- Instruction pill — appears above the guide -->
-      <div class="mob-instruction" id="mobInstruction" role="status" aria-live="polite" aria-atomic="true">
-        <span class="mob-instr-icon" id="mobInstrIcon" aria-hidden="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="2" width="18" height="20" rx="3" />
-            <circle cx="12" cy="9" r="3" />
-          </svg>
-        </span>
-        <span class="mob-instr-text" id="mobInstrText">Fit the passport inside the frame.</span>
-      </div>
+      <div class="dsk-step-connector dsk-step-connector--done" aria-hidden="true"></div>
 
-      <!-- The passport guide frame — the core UI element -->
-      <div class="mob-guide-wrap">
-        <div class="scan-guide" id="scanGuide" aria-label="Passport scanning area">
-          <!-- Corner accent markers -->
-          <span class="guide-corner guide-corner--tl" aria-hidden="true"></span>
-          <span class="guide-corner guide-corner--tr" aria-hidden="true"></span>
-          <span class="guide-corner guide-corner--bl" aria-hidden="true"></span>
-          <span class="guide-corner guide-corner--br" aria-hidden="true"></span>
-          <!-- MRZ zone indicator at bottom of guide -->
-          <div class="mrz-zone" id="mrzZone" aria-hidden="true">
-            <div class="mrz-bar"></div>
-            <div class="mrz-bar mrz-bar--short"></div>
-            <span class="mrz-tag">MRZ</span>
-          </div>
+      <div class="dsk-step dsk-step--active" id="dskStep2" aria-current="step">
+        <div class="dsk-step-circle" aria-hidden="true">
+          <div class="dsk-step-ripple"></div>
+          <span>2</span>
+        </div>
+        <div class="dsk-step-meta">
+          <span class="dsk-step-num">Step 2</span>
+          <span class="dsk-step-label">Capture Started</span>
         </div>
       </div>
 
-      <!-- Side instruction (what to place) -->
-      <div class="mob-side-label" id="mobSideLabel" aria-live="polite">
-        <span class="mob-side-badge" id="mobSideBadge">FRONT</span>
-        <p class="mob-side-desc" id="mobSideDesc">Place the passport front page completely inside the frame. Ensure all
-          four corners are visible.</p>
-      </div>
+      <div class="dsk-step-connector" aria-hidden="true"></div>
 
-    </div><!-- /mob-scan-area -->
-
-    <!-- Status bar -->
-    <div class="mob-status-bar">
-      <div class="mob-status-row" id="mobStatusRow">
-        <span class="mob-status-dot" id="mobStatusDot" aria-hidden="true"></span>
-        <span class="mob-status-text" id="mobStatusText" role="status" aria-live="polite">Initializing camera…</span>
-      </div>
-      <!-- Detection confidence bar -->
-      <div class="mob-detect-bar-wrap" id="mobDetectBarWrap">
-        <div class="mob-detect-bar">
-          <div class="mob-detect-fill" id="mobDetectFill" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-            aria-valuenow="0" aria-label="Detection confidence"></div>
+      <div class="dsk-step" id="dskStep3" aria-current="false">
+        <div class="dsk-step-circle" aria-hidden="true"><span>3</span></div>
+        <div class="dsk-step-meta">
+          <span class="dsk-step-num">Step 3</span>
+          <span class="dsk-step-label">Capture Complete</span>
         </div>
       </div>
-    </div>
+    </nav>
 
-    <!-- Shutter / Capture button -->
-    <button class="mob-shutter-btn" id="shutterBtn" aria-label="Capture passport photo">
-      <span class="shutter-inner"></span>
-    </button>
-
-    <!-- Torch button -->
-    <button class="mob-torch-btn" id="torchBtn" aria-label="Toggle flashlight" aria-pressed="false">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2" />
-      </svg>
-    </button>
-
-  </div><!-- /mobile-view -->
-
-
-  <!-- ════════════════════════════════════════════════════════════
-     FRONT → BACK TRANSITION OVERLAY
-     ════════════════════════════════════════════════════════════ -->
-  <div class="transition-overlay" id="transitionOverlay" style="display:none" role="alertdialog" aria-modal="true"
-    aria-labelledby="transTitle">
-    <div class="trans-card">
-      <div class="trans-check" aria-hidden="true">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="20,6 9,17 4,12" />
+    <!-- Info Banner -->
+    <div class="dsk-banner desktop-only" role="note">
+      <div class="dsk-banner-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
       </div>
-      <div class="trans-badge">Front Page Captured</div>
-      <h2 class="trans-title" id="transTitle">Great job!</h2>
-      <p class="trans-desc">Now turn the passport over and place the <strong>back page</strong> completely inside the
-        frame. Ensure all four corners are visible.</p>
-
-      <div class="trans-passport-visual" aria-hidden="true">
-        <div class="trans-passport trans-passport--done">
-          <svg width="40" height="56" viewBox="0 0 40 56" fill="none">
-            <rect x="1" y="1" width="38" height="54" rx="4" stroke="rgba(0,200,83,0.8)" stroke-width="1.5" />
-            <circle cx="20" cy="18" r="7" stroke="rgba(0,200,83,0.6)" stroke-width="1.5" />
-            <line x1="8" y1="32" x2="32" y2="32" stroke="rgba(0,200,83,0.4)" stroke-width="1.5" />
-            <line x1="8" y1="38" x2="24" y2="38" stroke="rgba(0,200,83,0.4)" stroke-width="1.5" />
-            <line x1="8" y1="44" x2="28" y2="44" stroke="rgba(0,200,83,0.4)" stroke-width="1.5" />
-          </svg>
-          <span class="trans-passport-tag">Front ✓</span>
-        </div>
-        <div class="trans-flip-arrow" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2">
-            <path d="M17 1l4 4-4 4" />
-            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-            <path d="M7 23l-4-4 4-4" />
-            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-          </svg>
-        </div>
-        <div class="trans-passport trans-passport--next">
-          <svg width="40" height="56" viewBox="0 0 40 56" fill="none">
-            <rect x="1" y="1" width="38" height="54" rx="4" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-            <line x1="8" y1="10" x2="32" y2="10" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
-            <line x1="8" y1="18" x2="32" y2="18" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
-            <line x1="8" y1="26" x2="24" y2="26" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
-            <rect x="8" y="34" width="24" height="8" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
-            <line x1="8" y1="48" x2="18" y2="48" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
-          </svg>
-          <span class="trans-passport-tag">Back</span>
-        </div>
-      </div>
-
-      <button class="trans-btn" id="transContinueBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 1l4 4-4 4" />
-          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-        </svg>
-        Scan Back Page Now
-      </button>
-
-      <button class="trans-btn-sec" id="transUploadBtn" aria-label="Upload back page of passport from file">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        Upload Back Page
-      </button>
-    </div>
-  </div>
-  <!-- ════════════════════════════════════════════════════════════
-     INTERACTIVE CROP / CORNER ADJUST SCREEN
-     ════════════════════════════════════════════════════════════ -->
-  <div class="crop-screen" id="cropScreen" style="display:none" role="dialog" aria-modal="true"
-    aria-labelledby="cropTitle">
-    <div class="crop-card">
-      <h2 class="crop-title" id="cropTitle">Adjust Corners</h2>
-      <p class="crop-desc">Drag the 4 green circles to align exactly with the corners of your passport.</p>
-
-
-      <!-- Glare warning banner -->
-      <div class="crop-glare-warning" id="cropGlareWarning" style="display:none">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-          style="margin-top: 1px; flex-shrink: 0;">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-        <span>Over-lighting or glare detected. If details are washed out, tap "Retake" and tilt the passport
-          slightly.</span>
-      </div>
-
-      <!-- Image preview area with interactive SVG overlay -->
-      <div class="crop-view-container">
-        <img id="cropImgPreview" class="crop-img-preview" alt="Document crop preview" />
-        <canvas id="cropMagnifier" width="90" height="90" class="crop-magnifier" style="display:none"></canvas>
-        <svg id="cropSvg" class="crop-svg" xmlns="http://www.w3.org/2000/svg">
-          <polygon id="cropPolygon" points="0,0 0,0 0,0 0,0" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853"
-            stroke-width="2.5" />
-          <circle id="hTL" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
-          <circle id="hTR" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
-          <circle id="hBR" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
-          <circle id="hBL" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
-        </svg>
-      </div>
-
-      <div class="crop-actions">
-        <button class="crop-btn crop-btn-sec" id="cropResetBtn">
-          Retake
-        </button>
-        <button class="crop-btn crop-btn-prim" id="cropConfirmBtn">
-          Done
-        </button>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- ════════════════════════════════════════════════════════════
-     SUCCESS SCREEN
-     ════════════════════════════════════════════════════════════ -->
-  <div class="success-screen" id="successScreen" style="display:none" role="alertdialog" aria-modal="true"
-    aria-labelledby="successTitle">
-    <div class="success-content">
-
-      <!-- Animated checkmark -->
-      <div class="success-mark" id="successMark" aria-hidden="true">
-        <svg class="success-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle class="success-ring" cx="55" cy="55" r="50" fill="none" stroke="#00C853" stroke-width="4" />
-          <polyline class="success-tick" points="32,57 48,73 78,38" fill="none" stroke="#00C853" stroke-width="5.5"
-            stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </div>
-
-      <div class="success-badge" aria-hidden="true">Verified Successfully</div>
-      <h1 class="success-title" id="successTitle">Passport Successfully Verified</h1>
-      <p class="success-sub">Both sides of your passport have been captured successfully.</p>
-
-      <!-- Captured thumbnails -->
-      <div class="success-thumbs" id="successThumbs" aria-label="Captured passport images">
-        <div class="success-thumb">
-          <img id="thumbFrontImg" src="" alt="Captured front page of passport" class="success-thumb-img" />
-          <span class="success-thumb-label">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="20,6 9,17 4,12" />
-            </svg>
-            Front
-          </span>
-          <button class="success-recrop-btn" id="reCropFrontBtn" aria-label="Re-crop front image">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
-              <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
-            </svg>
-            Re-crop
-          </button>
-        </div>
-        <div class="success-thumb">
-          <img id="thumbBackImg" src="" alt="Captured back page of passport" class="success-thumb-img" />
-          <span class="success-thumb-label">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="20,6 9,17 4,12" />
-            </svg>
-            Back
-          </span>
-          <button class="success-recrop-btn" id="reCropBackBtn" aria-label="Re-crop back image">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
-              <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
-            </svg>
-            Re-crop
-          </button>
-        </div>
-      </div>
-
-      <div class="success-actions-row">
-        <button class="success-back-btn" id="successBackBtn" aria-label="Back to scanning">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15,18 9,12 15,6" />
-          </svg>
-          Back
-        </button>
-        <button class="success-btn" id="successContinueBtn">
-          Continue to Application
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9,18 15,12 9,6" />
-          </svg>
-        </button>
-      </div>
-
-      <p class="success-note">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-        Your data is encrypted and secure. Processing your identity verification.
+      <p class="dsk-banner-text">
+        You will need your <strong>mobile phone</strong> to complete passport verification
       </p>
     </div>
+    <div class="dsk-banner mobile-only" role="note">
+      <div class="dsk-banner-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <p class="dsk-banner-text">
+        Scan or upload your <strong>passport</strong> to complete identity verification
+      </p>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="dsk-grid">
+
+      <!-- QR Code Card — Desktop Only -->
+      <section class="dsk-card dsk-qr-card desktop-qr-flow" aria-labelledby="qrCardTitle">
+        <div class="dsk-card-eyebrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z"/>
+            <path d="M17 17h4v4h-4z"/><path d="M14 17h3"/><path d="M17 14v3"/>
+          </svg>
+          Scan QR Code
+        </div>
+
+        <h2 class="dsk-card-title" id="qrCardTitle">Continue on Your Mobile Device</h2>
+        <p class="dsk-card-sub">Open your phone's camera and point it at the QR code to begin passport scanning on your mobile device.</p>
+
+        <!-- QR visual -->
+        <div class="dsk-qr-block">
+          <div class="dsk-qr-frame">
+            <img id="qrImage" width="190" height="190" alt="QR Code — scan with your phone camera" />
+            <span class="dsk-qr-corner dsk-qr-corner--tl" aria-hidden="true"></span>
+            <span class="dsk-qr-corner dsk-qr-corner--tr" aria-hidden="true"></span>
+            <span class="dsk-qr-corner dsk-qr-corner--bl" aria-hidden="true"></span>
+            <span class="dsk-qr-corner dsk-qr-corner--br" aria-hidden="true"></span>
+          </div>
+          <p class="dsk-qr-expire">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+            </svg>
+            Expires in&nbsp;<span id="qrCountdown" aria-live="polite">05:00</span>
+          </p>
+        
+        </div>
+
+        <!-- How to use steps -->
+        <ol class="dsk-qr-steps" aria-label="How to scan">
+          <li class="dsk-qr-step">
+            <span class="dsk-qr-num">1</span>
+            <span>Open the camera app on your phone</span>
+          </li>
+          <li class="dsk-qr-step">
+            <span class="dsk-qr-num">2</span>
+            <span>Point it at the QR code above</span>
+          </li>
+          <li class="dsk-qr-step">
+            <span class="dsk-qr-num">3</span>
+            <span>Follow the on-screen instructions</span>
+          </li>
+        </ol>
+
+        <div class="dsk-divider" aria-hidden="true"><span>or demo on this screen</span></div>
+
+        <button class="dsk-upload-btn" id="uploadPassportBtn" aria-label="Upload passport image from file">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload Passport Image
+        </button>
+        <input type="file" id="passportFileInput" accept="image/*" style="display: none;" />
+
+        <button class="dsk-open-btn" id="openScannerBtn" aria-label="Open passport scanner in this window">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          Open Passport Scanner
+        </button>
+      </section>
+
+      <!-- Mobile Direct Flow Card — Mobile/Tablet Only -->
+      <section class="dsk-card mob-action-card mobile-direct-flow" aria-labelledby="mobCardTitle">
+        <div class="dsk-card-eyebrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="2" width="18" height="20" rx="3"/>
+            <circle cx="12" cy="9" r="3"/>
+            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+          </svg>
+          Passport Verification
+        </div>
+
+        <h2 class="dsk-card-title" id="mobCardTitle">Verify Your Passport</h2>
+        <p class="dsk-card-sub">Use your device's camera to scan your passport, or upload an existing photo from your gallery.</p>
+
+        <!-- Mobile action buttons -->
+        <div class="mob-actions">
+          <button class="mob-scan-btn" id="mobOpenScannerBtn" aria-label="Open camera to scan passport">
+            <div class="mob-btn-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <div class="mob-btn-text">
+              <span class="mob-btn-label">Scan Passport</span>
+              <span class="mob-btn-desc">Use back camera for best quality</span>
+            </div>
+            <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9,18 15,12 9,6"/>
+            </svg>
+          </button>
+
+          <div class="mob-actions-divider"><span>or</span></div>
+
+          <button class="mob-upload-btn" id="mobUploadPassportBtn" aria-label="Upload passport image from gallery">
+            <div class="mob-btn-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+              </svg>
+            </div>
+            <div class="mob-btn-text">
+              <span class="mob-btn-label">Upload Passport</span>
+              <span class="mob-btn-desc">Choose from gallery or files</span>
+            </div>
+            <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9,18 15,12 9,6"/>
+            </svg>
+          </button>
+
+          <!-- Quick Mock Demo verification button -->
+          <button class="mob-upload-btn" id="mobMockDirectBtn" style="border: 2px dashed #00C853; color: #00C853; background: transparent; margin-top: 14px;" aria-label="Quick demo simulation">
+            <div class="mob-btn-icon" style="color: #00C853; background: rgba(0, 200, 83, 0.08);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <div class="mob-btn-text">
+              <span class="mob-btn-label">⚡ Direct Demo Flow</span>
+              <span class="mob-btn-desc">Skip scan & check form directly</span>
+            </div>
+            <svg class="mob-btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: #00C853;">
+              <polyline points="9,18 15,12 9,6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Tips -->
+        <div class="mob-tips-row">
+          <div class="mob-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            Good lighting
+          </div>
+          <div class="mob-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2"/>
+            </svg>
+            Hold from edges
+          </div>
+          <div class="mob-tip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="2" width="18" height="20" rx="3"/>
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            All corners visible
+          </div>
+        </div>
+
+        <div class="dsk-security-note mob-security-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Images are end-to-end encrypted and never stored permanently.
+        </div>
+      </section>
+
+      <!-- Info / Tips Card -->
+      <aside class="dsk-card dsk-info-card" aria-labelledby="infoCardTitle">
+        <h3 class="dsk-info-title" id="infoCardTitle">What you'll need</h3>
+
+        <ul class="dsk-needs-list" role="list">
+          <li class="dsk-needs-item">
+            <div class="dsk-needs-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="2" width="18" height="20" rx="3"/>
+                <circle cx="12" cy="9" r="3"/>
+                <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+              </svg>
+            </div>
+            <div>
+              <strong>Valid Passport</strong>
+              <p>Your original passport must be physically present and undamaged</p>
+            </div>
+          </li>
+          <li class="dsk-needs-item">
+            <div class="dsk-needs-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <path d="M12 18h.01"/>
+              </svg>
+            </div>
+            <div>
+              <strong>Phone with Camera</strong>
+              <p>Scan the QR code to open the scanner on your mobile device</p>
+            </div>
+          </li>
+          <li class="dsk-needs-item">
+            <div class="dsk-needs-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              </svg>
+            </div>
+            <div>
+              <strong>Good Lighting</strong>
+              <p>A well-lit room ensures the clearest passport capture</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="dsk-tips-box">
+          <div class="dsk-tips-head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+            </svg>
+            Tips for best results
+          </div>
+          <ul class="dsk-tips-list">
+            <li>Place passport on a flat, dark surface</li>
+            <li>Hold phone parallel to the passport</li>
+            <li>Ensure all four corners are visible</li>
+            <li>Avoid direct light or glare (especially on the passport number)</li>
+          </ul>
+        </div>
+
+        <div class="dsk-security-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Images are end-to-end encrypted and never stored permanently.
+        </div>
+
+        <!-- Waiting indicator -->
+        <div class="dsk-waiting" id="dskWaiting" aria-live="polite" aria-label="Waiting for mobile device">
+          <div class="dsk-wait-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <span>Waiting for mobile device…</span>
+        </div>
+      </aside>
+
+    </div><!-- /dsk-grid -->
+  </main>
+</div><!-- /desktop-view -->
+
+
+<!-- ════════════════════════════════════════════════════════════
+     MOBILE CAMERA VIEW — Full-screen camera interface
+     ════════════════════════════════════════════════════════════ -->
+<div class="mobile-view" id="mobileView" style="display:none" role="dialog" aria-modal="true" aria-label="Passport scanner">
+
+  <!-- 6-Second Onboarding Guide Demo Overlay -->
+  <div class="demo-overlay" id="scannerDemoOverlay" style="display: none;">
+    <div class="demo-card">
+      <div class="demo-header">
+        <span class="demo-badge">QUICK GUIDE</span>
+        <h3 class="demo-title">How to Verify</h3>
+      </div>
+      
+      <div class="demo-animation-container">
+        <svg class="demo-svg" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background Frame -->
+          <rect x="10" y="10" width="180" height="130" rx="8" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+          
+          <!-- Scene 1: Scan / Align -->
+          <g class="demo-scene scene-scan">
+            <!-- Guide Box -->
+            <rect x="40" y="25" width="120" height="80" rx="6" fill="none" stroke="#64748b" stroke-dasharray="4 4" stroke-width="1.5"/>
+            <!-- Passport Card moving in -->
+            <g class="demo-passport-move">
+              <rect x="50" y="32" width="100" height="65" rx="4" fill="#0f172a" stroke="#00C853" stroke-width="2"/>
+              <rect x="60" y="42" width="20" height="25" rx="2" fill="#334155"/>
+              <line x1="90" y1="47" x2="130" y2="47" stroke="#334155" stroke-width="2"/>
+              <line x1="90" y1="57" x2="120" y2="57" stroke="#334155" stroke-width="2"/>
+              <line x1="90" y1="67" x2="135" y2="67" stroke="#334155" stroke-width="2"/>
+            </g>
+            <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">1. Align passport inside frame</text>
+          </g>
+          
+          <!-- Scene 2: Upload File -->
+          <g class="demo-scene scene-upload">
+            <g class="demo-upload-arrow">
+              <path d="M100 80 L100 45 M90 55 L100 45 L110 55" fill="none" stroke="#00C853" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="75" y="70" width="50" height="30" rx="3" fill="none" stroke="#334155" stroke-width="2"/>
+            </g>
+            <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">2. Or click "Upload Passport"</text>
+          </g>
+          
+          <!-- Scene 3: Adjust Corners -->
+          <g class="demo-scene scene-adjust">
+            <!-- Passport Card -->
+            <rect x="50" y="32" width="100" height="65" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+            <!-- Poly Overlay -->
+            <polygon points="55,37 145,39 142,89 58,92" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853" stroke-width="2"/>
+            <!-- Animated Finger & Corner snaps -->
+            <g class="demo-corners">
+              <circle cx="55" cy="37" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+              <circle cx="145" cy="39" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+              <circle cx="142" cy="89" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+              <circle cx="58" cy="92" r="4" fill="#fff" stroke="#00C853" stroke-width="1.5"/>
+            </g>
+            <g class="demo-finger">
+              <circle cx="142" cy="89" r="9" fill="rgba(0, 200, 83, 0.4)" class="demo-tap-pulse"/>
+              <!-- Hand/finger path -->
+              <path d="M142 89 L152 109 L162 105 Z" fill="#94a3b8"/>
+            </g>
+            <text x="100" y="125" fill="#94a3b8" font-size="9" text-anchor="middle" font-weight="600">3. Drag corners to fit precisely</text>
+          </g>
+        </svg>
+      </div>
+      
+      <div class="demo-footer" style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="demo-skip-btn" id="demoMockVerifyBtn" style="background: rgba(0, 200, 83, 0.15); color: #4ade80; border: 1.5px solid rgba(74, 222, 128, 0.35); font-weight: 700;">⚡ Mock Verification</button>
+        <button class="demo-skip-btn" id="demoSkipBtn">Skip (6s)</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Live camera video -->
+  <video class="cam-video" id="camVideo" autoplay playsinline muted></video>
+
+  <!-- Glare Overlay Canvas for drawing red highlights -->
+  <canvas id="glareOverlayCanvas" class="glare-overlay-canvas"></canvas>
+
+  <!-- Hidden canvas for frame capture -->
+  <canvas id="camCanvas" style="display:none" aria-hidden="true"></canvas>
+
+  <!-- Top navigation bar -->
+  <div class="mob-topbar" role="navigation" aria-label="Scanner navigation">
+    <div class="mob-steps" aria-label="Scan progress" role="list">
+      <div class="mob-step mob-step--active" id="mobStep1" role="listitem">
+        <div class="mob-step-dot" aria-hidden="true"></div>
+        <span>Front</span>
+      </div>
+      <div class="mob-connector" id="mobConnector" aria-hidden="true"></div>
+      <div class="mob-step" id="mobStep2" role="listitem">
+        <div class="mob-step-dot" aria-hidden="true"></div>
+        <span>Back</span>
+      </div>
+    </div>
+    <button class="mob-close-btn" id="closeMobileBtn" aria-label="Close passport scanner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Central scan area (guide + instruction + status) -->
+  <div class="mob-scan-area" id="mobScanArea">
+
+    <!-- Critical Glare/Overexposure Warning -->
+    <div class="glare-critical-warning" id="glareCriticalWarning" style="display:none" role="alert">
+      <div class="glare-warning-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="glare-warning-text">
+        Passport image quality is too bright or contains glare. We cannot accurately read your passport. Please move away from direct light, reduce reflections, adjust the passport angle, and scan again.
+      </div>
+    </div>
+
+    <!-- Instruction pill — appears above the guide -->
+    <div class="mob-instruction" id="mobInstruction" role="status" aria-live="polite" aria-atomic="true">
+      <span class="mob-instr-icon" id="mobInstrIcon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="2" width="18" height="20" rx="3"/>
+          <circle cx="12" cy="9" r="3"/>
+        </svg>
+      </span>
+      <span class="mob-instr-text" id="mobInstrText">Fit the passport inside the frame.</span>
+    </div>
+
+    <!-- The passport guide frame — the core UI element -->
+    <div class="mob-guide-wrap">
+      <div class="scan-guide" id="scanGuide" aria-label="Passport scanning area">
+        <!-- Corner accent markers -->
+        <span class="guide-corner guide-corner--tl" aria-hidden="true"></span>
+        <span class="guide-corner guide-corner--tr" aria-hidden="true"></span>
+        <span class="guide-corner guide-corner--bl" aria-hidden="true"></span>
+        <span class="guide-corner guide-corner--br" aria-hidden="true"></span>
+        <!-- MRZ zone indicator at bottom of guide -->
+        <div class="mrz-zone" id="mrzZone" aria-hidden="true">
+          <div class="mrz-bar"></div>
+          <div class="mrz-bar mrz-bar--short"></div>
+          <span class="mrz-tag">MRZ</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side instruction (what to place) -->
+    <div class="mob-side-label" id="mobSideLabel" aria-live="polite">
+      <span class="mob-side-badge" id="mobSideBadge">FRONT</span>
+      <p class="mob-side-desc" id="mobSideDesc">Place the passport front page completely inside the frame. Ensure all four corners are visible.</p>
+    </div>
+
+  </div><!-- /mob-scan-area -->
+
+  <!-- Status bar -->
+  <div class="mob-status-bar">
+    <div class="mob-status-row" id="mobStatusRow">
+      <span class="mob-status-dot" id="mobStatusDot" aria-hidden="true"></span>
+      <span class="mob-status-text" id="mobStatusText" role="status" aria-live="polite">Initializing camera…</span>
+    </div>
+    <!-- Detection confidence bar -->
+    <div class="mob-detect-bar-wrap" id="mobDetectBarWrap">
+      <div class="mob-detect-bar">
+        <div class="mob-detect-fill" id="mobDetectFill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Detection confidence"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shutter / Capture button -->
+  <button class="mob-shutter-btn" id="shutterBtn" aria-label="Capture passport photo">
+    <span class="shutter-inner"></span>
+  </button>
+
+  <!-- Torch button -->
+  <button class="mob-torch-btn" id="torchBtn" aria-label="Toggle flashlight" aria-pressed="false">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+    </svg>
+  </button>
+
+</div><!-- /mobile-view -->
 
 
-  <!-- ════════════════════════════════════════════════════════════
+<!-- ════════════════════════════════════════════════════════════
+     FRONT → BACK TRANSITION OVERLAY
+     ════════════════════════════════════════════════════════════ -->
+<div class="transition-overlay" id="transitionOverlay" style="display:none" role="alertdialog" aria-modal="true" aria-labelledby="transTitle">
+  <div class="trans-card">
+    <div class="trans-check" aria-hidden="true">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="20,6 9,17 4,12"/>
+      </svg>
+    </div>
+    <div class="trans-badge">Front Page Captured</div>
+    <h2 class="trans-title" id="transTitle">Great job!</h2>
+    <p class="trans-desc">Now turn the passport over and place the <strong>back page</strong> completely inside the frame. Ensure all four corners are visible.</p>
+
+    <div class="trans-passport-visual" aria-hidden="true">
+      <div class="trans-passport trans-passport--done">
+        <svg width="40" height="56" viewBox="0 0 40 56" fill="none">
+          <rect x="1" y="1" width="38" height="54" rx="4" stroke="rgba(0,200,83,0.8)" stroke-width="1.5"/>
+          <circle cx="20" cy="18" r="7" stroke="rgba(0,200,83,0.6)" stroke-width="1.5"/>
+          <line x1="8" y1="32" x2="32" y2="32" stroke="rgba(0,200,83,0.4)" stroke-width="1.5"/>
+          <line x1="8" y1="38" x2="24" y2="38" stroke="rgba(0,200,83,0.4)" stroke-width="1.5"/>
+          <line x1="8" y1="44" x2="28" y2="44" stroke="rgba(0,200,83,0.4)" stroke-width="1.5"/>
+        </svg>
+        <span class="trans-passport-tag">Front ✓</span>
+      </div>
+      <div class="trans-flip-arrow" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2">
+          <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+      </div>
+      <div class="trans-passport trans-passport--next">
+        <svg width="40" height="56" viewBox="0 0 40 56" fill="none">
+          <rect x="1" y="1" width="38" height="54" rx="4" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <line x1="8" y1="10" x2="32" y2="10" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <line x1="8" y1="18" x2="32" y2="18" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <line x1="8" y1="26" x2="24" y2="26" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <rect x="8" y="34" width="24" height="8" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <line x1="8" y1="48" x2="18" y2="48" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+        </svg>
+        <span class="trans-passport-tag">Back</span>
+      </div>
+    </div>
+
+    <button class="trans-btn" id="transContinueBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+      </svg>
+      Scan Back Page Now
+    </button>
+
+    <button class="trans-btn-sec" id="transUploadBtn" aria-label="Upload back page of passport from file">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Upload Back Page
+    </button>
+  </div>
+</div>
+<!-- ════════════════════════════════════════════════════════════
+     INTERACTIVE CROP / CORNER ADJUST SCREEN
+     ════════════════════════════════════════════════════════════ -->
+<div class="crop-screen" id="cropScreen" style="display:none" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="crop-card">
+    <h2 class="crop-title" id="cropTitle">Adjust Corners</h2>
+    <p class="crop-desc">Drag the 4 green circles to align exactly with the corners of your passport.</p>
+    
+    
+    <!-- Glare warning banner -->
+    <div class="crop-glare-warning" id="cropGlareWarning" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-top: 1px; flex-shrink: 0;">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>Over-lighting or glare detected. If details are washed out, tap "Retake" and tilt the passport slightly.</span>
+    </div>
+
+    <!-- Image preview area with interactive SVG overlay -->
+    <div class="crop-view-container">
+      <img id="cropImgPreview" class="crop-img-preview" alt="Document crop preview" />
+      <canvas id="cropMagnifier" width="90" height="90" class="crop-magnifier" style="display:none"></canvas>
+      <svg id="cropSvg" class="crop-svg" xmlns="http://www.w3.org/2000/svg">
+        <polygon id="cropPolygon" points="0,0 0,0 0,0 0,0" fill="rgba(0, 200, 83, 0.15)" stroke="#00C853" stroke-width="2.5" />
+        <circle id="hTL" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+        <circle id="hTR" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+        <circle id="hBR" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+        <circle id="hBL" class="crop-handle" r="16" fill="rgba(0, 200, 83, 0.3)" stroke="#FFFFFF" stroke-width="3" />
+      </svg>
+    </div>
+
+    <div class="crop-actions">
+      <button class="crop-btn crop-btn-sec" id="cropResetBtn">
+        Retake
+      </button>
+      <button class="crop-btn crop-btn-prim" id="cropConfirmBtn">
+        Done
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SUCCESS SCREEN
+     ════════════════════════════════════════════════════════════ -->
+<div class="success-screen" id="successScreen" style="display:none" role="alertdialog" aria-modal="true" aria-labelledby="successTitle">
+  <div class="success-content">
+
+    <!-- Animated checkmark -->
+    <div class="success-mark" id="successMark" aria-hidden="true">
+      <svg class="success-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle class="success-ring" cx="55" cy="55" r="50" fill="none" stroke="#00C853" stroke-width="4"/>
+        <polyline class="success-tick" points="32,57 48,73 78,38" fill="none" stroke="#00C853" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="success-badge" aria-hidden="true">Verified Successfully</div>
+    <h1 class="success-title" id="successTitle">Passport Successfully Verified</h1>
+    <p class="success-sub">Both sides of your passport have been captured successfully.</p>
+
+    <!-- Captured thumbnails -->
+    <div class="success-thumbs" id="successThumbs" aria-label="Captured passport images">
+      <div class="success-thumb">
+        <img id="thumbFrontImg" src="" alt="Captured front page of passport" class="success-thumb-img"/>
+        <span class="success-thumb-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20,6 9,17 4,12"/>
+          </svg>
+          Front
+        </span>
+        <button class="success-recrop-btn" id="reCropFrontBtn" aria-label="Re-crop front image">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+            <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+          </svg>
+          Re-crop
+        </button>
+      </div>
+      <div class="success-thumb">
+        <img id="thumbBackImg" src="" alt="Captured back page of passport" class="success-thumb-img"/>
+        <span class="success-thumb-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20,6 9,17 4,12"/>
+          </svg>
+          Back
+        </span>
+        <button class="success-recrop-btn" id="reCropBackBtn" aria-label="Re-crop back image">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+            <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+          </svg>
+          Re-crop
+        </button>
+      </div>
+    </div>
+
+    <div class="success-actions-row">
+      <button class="success-back-btn" id="successBackBtn" aria-label="Back to scanning">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15,18 9,12 15,6"/>
+        </svg>
+        Back
+      </button>
+      <button class="success-btn" id="successContinueBtn">
+        Continue to Application
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9,18 15,12 9,6"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="success-note">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Your data is encrypted and secure. Processing your identity verification.
+    </p>
+  </div>
+</div>
+
+
+
+<!-- ════════════════════════════════════════════════════════════
      APPLICATION FORM SCREEN
      ════════════════════════════════════════════════════════════ -->
-  <div class="app-form-screen" id="appFormScreen" style="display:none" role="main" aria-labelledby="appFormTitle">
-    <div class="app-form-wrap">
+<div class="app-form-screen" id="appFormScreen" style="display:none" role="main" aria-labelledby="appFormTitle">
+  <div class="app-form-wrap">
 
-      <!-- Header bar -->
-      <div class="app-form-header">
-        <button class="app-back-btn" id="appBackBtn" aria-label="Back to crop adjustment">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15,18 9,12 15,6" />
+    <!-- Header bar -->
+    <div class="app-form-header">
+      <button class="app-back-btn" id="appBackBtn" aria-label="Back to crop adjustment">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15,18 9,12 15,6"/>
+        </svg>
+        Back to Crop
+      </button>
+      <div class="app-form-brand">
+        <div class="dsk-brand-logo" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <span class="dsk-brand-name">SecureID</span>
+        <span class="dsk-brand-pill">e-KYC</span>
+      </div>
+    </div>
+
+    <!-- Passport images strip -->
+    <div class="app-form-thumbs" id="appFormThumbs">
+      <div class="app-form-thumb-wrap">
+        <img id="appThumbFront" class="app-form-thumb" src="" alt="Passport front"/>
+        <span class="app-form-thumb-tag">Front</span>
+      </div>
+      <div class="app-form-thumb-wrap">
+        <img id="appThumbBack" class="app-form-thumb" src="" alt="Passport back"/>
+        <span class="app-form-thumb-tag">Back</span>
+      </div>
+    </div>
+
+    <!-- Section title -->
+    <div class="app-form-title-row">
+      <div class="app-form-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Passport Details Verified
+      </div>
+      <h1 class="app-form-title" id="appFormTitle">Confirm Your Passport Details</h1>
+      <p class="app-form-sub">Review and confirm the details extracted from your passport. Edit any field if needed.</p>
+    </div>
+
+    <!-- Form -->
+    <form class="app-form" id="passportDetailsForm" novalidate autocomplete="off">
+
+      <!-- ── Personal Information ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          Personal Information
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group">
+            <label class="app-label" for="fieldSurname">Surname / Last Name</label>
+            <input class="app-input" type="text" id="fieldSurname" name="surname" placeholder="e.g. KUMAR" autocomplete="family-name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldGivenNames">Given Names</label>
+            <input class="app-input" type="text" id="fieldGivenNames" name="givenNames" placeholder="e.g. ASHISH" autocomplete="given-name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldDob">Date of Birth</label>
+            <input class="app-input" type="text" id="fieldDob" name="dob" placeholder="DD/MM/YYYY"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldGender">Gender</label>
+            <select class="app-input app-select" id="fieldGender" name="gender">
+              <option value="">Select gender</option>
+              <option value="M">Male (M)</option>
+              <option value="F">Female (F)</option>
+              <option value="X">Other (X)</option>
+            </select>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldNationality">Nationality</label>
+            <input class="app-input" type="text" id="fieldNationality" name="nationality" placeholder="e.g. INDIAN"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldPlaceOfBirth">Place of Birth</label>
+            <input class="app-input" type="text" id="fieldPlaceOfBirth" name="placeOfBirth" placeholder="e.g. AURAIYA, UTTAR PRADESH"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── Passport Information ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="2" width="18" height="20" rx="3"/>
+            <circle cx="12" cy="9" r="3"/>
+            <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+          </svg>
+          Passport Information
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group">
+            <label class="app-label" for="fieldPassportNo">Passport Number</label>
+            <input class="app-input app-input--mono" type="text" id="fieldPassportNo" name="passportNo" placeholder="e.g. Y6978513" maxlength="9"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldCountryCode">Country Code</label>
+            <input class="app-input app-input--mono" type="text" id="fieldCountryCode" name="countryCode" placeholder="e.g. IND" maxlength="3"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldIssueDate">Date of Issue</label>
+            <input class="app-input" type="text" id="fieldIssueDate" name="issueDate" placeholder="DD/MM/YYYY"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldExpiryDate">Date of Expiry</label>
+            <input class="app-input" type="text" id="fieldExpiryDate" name="expiryDate" placeholder="DD/MM/YYYY"/>
+          </div>
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldPlaceOfIssue">Place of Issue</label>
+            <input class="app-input" type="text" id="fieldPlaceOfIssue" name="placeOfIssue" placeholder="e.g. LUCKNOW"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── Family Details (from back page) ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Family Details
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group">
+            <label class="app-label" for="fieldFatherName">Father's / Legal Guardian's Name</label>
+            <input class="app-input" type="text" id="fieldFatherName" name="fatherName" placeholder="Full name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldMotherName">Mother's Name</label>
+            <input class="app-input" type="text" id="fieldMotherName" name="motherName" placeholder="Full name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldSpouseName">Spouse's Name <span class="app-label-opt">(optional)</span></label>
+            <input class="app-input" type="text" id="fieldSpouseName" name="spouseName" placeholder="Full name"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldFileNo">File Number</label>
+            <input class="app-input app-input--mono" type="text" id="fieldFileNo" name="fileNo" placeholder="e.g. LK2068200715223"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── Address ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          Address
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldAddress">Permanent Address</label>
+            <textarea class="app-input app-textarea" id="fieldAddress" name="address" rows="3" placeholder="Enter full address as shown on passport back page"></textarea>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldCity">City / District</label>
+            <input class="app-input" type="text" id="fieldCity" name="city" placeholder="e.g. Haridwar"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldState">State</label>
+            <input class="app-input" type="text" id="fieldState" name="state" placeholder="e.g. Uttarakhand"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldPin">PIN Code</label>
+            <input class="app-input app-input--mono" type="text" id="fieldPin" name="pin" placeholder="e.g. 247667" maxlength="10"/>
+          </div>
+          <div class="app-form-group">
+            <label class="app-label" for="fieldCountry">Country</label>
+            <input class="app-input" type="text" id="fieldCountry" name="country" placeholder="e.g. India" value="India"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- ── MRZ ── -->
+      <fieldset class="app-fieldset">
+        <legend class="app-fieldset-legend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M7 15h4M7 11h10M7 8h10"/>
+          </svg>
+          Machine Readable Zone (MRZ)
+        </legend>
+        <div class="app-form-grid">
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldMrz1">MRZ Line 1</label>
+            <input class="app-input app-input--mono app-input--mrz" type="text" id="fieldMrz1" name="mrz1" placeholder="P<INDKUMAR<<ASHISH<<<<<<<<<<<<<<<<<<<<<<<<<<" maxlength="44"/>
+          </div>
+          <div class="app-form-group app-form-group--full">
+            <label class="app-label" for="fieldMrz2">MRZ Line 2</label>
+            <input class="app-input app-input--mono app-input--mrz" type="text" id="fieldMrz2" name="mrz2" placeholder="Y6978513<9IND0401227M3307238200682007152239" maxlength="44"/>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Declaration -->
+      <div class="app-declaration">
+        <label class="app-checkbox-label">
+          <input type="checkbox" id="appDeclaration" class="app-checkbox" required/>
+          <span class="app-checkbox-box" aria-hidden="true"></span>
+          <span>I confirm that the above details are accurate and match my original passport. I consent to processing this data for identity verification.</span>
+        </label>
+      </div>
+
+      <!-- Actions -->
+      <div class="app-form-actions">
+        <button type="button" class="app-cancel-btn" id="appCancelBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15,18 9,12 15,6"/>
           </svg>
           Back to Crop
         </button>
-        <div class="app-form-brand">
-          <div class="dsk-brand-logo" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </div>
-          <span class="dsk-brand-name">SecureID</span>
-          <span class="dsk-brand-pill">e-KYC</span>
-        </div>
-      </div>
-
-      <!-- Passport images strip -->
-      <div class="app-form-thumbs" id="appFormThumbs">
-        <div class="app-form-thumb-wrap">
-          <img id="appThumbFront" class="app-form-thumb" src="" alt="Passport front" />
-          <span class="app-form-thumb-tag">Front</span>
-        </div>
-        <div class="app-form-thumb-wrap">
-          <img id="appThumbBack" class="app-form-thumb" src="" alt="Passport back" />
-          <span class="app-form-thumb-tag">Back</span>
-        </div>
-      </div>
-
-      <!-- Section title -->
-      <div class="app-form-title-row">
-        <div class="app-form-badge">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <button type="submit" class="app-submit-btn" id="appSubmitBtn">
+          Submit Verification
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9,18 15,12 9,6"/>
           </svg>
-          Passport Details Verified
-        </div>
-        <h1 class="app-form-title" id="appFormTitle">Confirm Your Passport Details</h1>
-        <p class="app-form-sub">Review and confirm the details extracted from your passport. Edit any field if needed.
-        </p>
+        </button>
       </div>
 
-      <!-- Form -->
-      <form class="app-form" id="passportDetailsForm" novalidate autocomplete="off">
+    </form>
 
-        <!-- ── Personal Information ── -->
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset-legend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            Personal Information
-          </legend>
-          <div class="app-form-grid">
-            <div class="app-form-group">
-              <label class="app-label" for="fieldSurname">Surname / Last Name</label>
-              <input class="app-input" type="text" id="fieldSurname" name="surname" placeholder="e.g. KUMAR"
-                autocomplete="family-name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldGivenNames">Given Names</label>
-              <input class="app-input" type="text" id="fieldGivenNames" name="givenNames" placeholder="e.g. ASHISH"
-                autocomplete="given-name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldDob">Date of Birth</label>
-              <input class="app-input" type="text" id="fieldDob" name="dob" placeholder="DD/MM/YYYY" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldGender">Gender</label>
-              <select class="app-input app-select" id="fieldGender" name="gender">
-                <option value="">Select gender</option>
-                <option value="M">Male (M)</option>
-                <option value="F">Female (F)</option>
-                <option value="X">Other (X)</option>
-              </select>
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldNationality">Nationality</label>
-              <input class="app-input" type="text" id="fieldNationality" name="nationality" placeholder="e.g. INDIAN" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldPlaceOfBirth">Place of Birth</label>
-              <input class="app-input" type="text" id="fieldPlaceOfBirth" name="placeOfBirth"
-                placeholder="e.g. AURAIYA, UTTAR PRADESH" />
-            </div>
-          </div>
-        </fieldset>
+    <!-- Security footer -->
+    <p class="app-form-footer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      256-bit SSL encrypted · Data is never stored permanently
+    </p>
 
-        <!-- ── Passport Information ── -->
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset-legend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="2" width="18" height="20" rx="3" />
-              <circle cx="12" cy="9" r="3" />
-              <path d="M6 21v-1a6 6 0 0 1 12 0v1" />
-            </svg>
-            Passport Information
-          </legend>
-          <div class="app-form-grid">
-            <div class="app-form-group">
-              <label class="app-label" for="fieldPassportNo">Passport Number</label>
-              <input class="app-input app-input--mono" type="text" id="fieldPassportNo" name="passportNo"
-                placeholder="e.g. Y6978513" maxlength="9" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldCountryCode">Country Code</label>
-              <input class="app-input app-input--mono" type="text" id="fieldCountryCode" name="countryCode"
-                placeholder="e.g. IND" maxlength="3" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldIssueDate">Date of Issue</label>
-              <input class="app-input" type="text" id="fieldIssueDate" name="issueDate" placeholder="DD/MM/YYYY" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldExpiryDate">Date of Expiry</label>
-              <input class="app-input" type="text" id="fieldExpiryDate" name="expiryDate" placeholder="DD/MM/YYYY" />
-            </div>
-            <div class="app-form-group app-form-group--full">
-              <label class="app-label" for="fieldPlaceOfIssue">Place of Issue</label>
-              <input class="app-input" type="text" id="fieldPlaceOfIssue" name="placeOfIssue"
-                placeholder="e.g. LUCKNOW" />
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- ── Family Details (from back page) ── -->
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset-legend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            Family Details
-          </legend>
-          <div class="app-form-grid">
-            <div class="app-form-group">
-              <label class="app-label" for="fieldFatherName">Father's / Legal Guardian's Name</label>
-              <input class="app-input" type="text" id="fieldFatherName" name="fatherName" placeholder="Full name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldMotherName">Mother's Name</label>
-              <input class="app-input" type="text" id="fieldMotherName" name="motherName" placeholder="Full name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldSpouseName">Spouse's Name <span
-                  class="app-label-opt">(optional)</span></label>
-              <input class="app-input" type="text" id="fieldSpouseName" name="spouseName" placeholder="Full name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldFileNo">File Number</label>
-              <input class="app-input app-input--mono" type="text" id="fieldFileNo" name="fileNo"
-                placeholder="e.g. LK2068200715223" />
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- ── Address ── -->
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset-legend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            Address
-          </legend>
-          <div class="app-form-grid">
-            <div class="app-form-group app-form-group--full">
-              <label class="app-label" for="fieldAddress">Permanent Address</label>
-              <textarea class="app-input app-textarea" id="fieldAddress" name="address" rows="3"
-                placeholder="Enter full address as shown on passport back page"></textarea>
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldCity">City / District</label>
-              <input class="app-input" type="text" id="fieldCity" name="city" placeholder="e.g. Haridwar" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldState">State</label>
-              <input class="app-input" type="text" id="fieldState" name="state" placeholder="e.g. Uttarakhand" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldPin">PIN Code</label>
-              <input class="app-input app-input--mono" type="text" id="fieldPin" name="pin" placeholder="e.g. 247667"
-                maxlength="10" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldCountry">Country</label>
-              <input class="app-input" type="text" id="fieldCountry" name="country" placeholder="e.g. India"
-                value="India" />
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- ── MRZ ── -->
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset-legend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="4" width="20" height="16" rx="2" />
-              <path d="M7 15h4M7 11h10M7 8h10" />
-            </svg>
-            Machine Readable Zone (MRZ)
-          </legend>
-          <div class="app-form-grid">
-            <div class="app-form-group app-form-group--full">
-              <label class="app-label" for="fieldMrz1">MRZ Line 1</label>
-              <input class="app-input app-input--mono app-input--mrz" type="text" id="fieldMrz1" name="mrz1"
-                placeholder="P<INDKUMAR<<ASHISH<<<<<<<<<<<<<<<<<<<<<<<<<<" maxlength="44" />
-            </div>
-            <div class="app-form-group app-form-group--full">
-              <label class="app-label" for="fieldMrz2">MRZ Line 2</label>
-              <input class="app-input app-input--mono app-input--mrz" type="text" id="fieldMrz2" name="mrz2"
-                placeholder="Y6978513<9IND0401227M3307238200682007152239" maxlength="44" />
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- Declaration -->
-        <div class="app-declaration">
-          <label class="app-checkbox-label">
-            <input type="checkbox" id="appDeclaration" class="app-checkbox" required />
-            <span class="app-checkbox-box" aria-hidden="true"></span>
-            <span>I confirm that the above details are accurate and match my original passport. I consent to processing
-              this data for identity verification.</span>
-          </label>
-        </div>
-
-        <!-- Actions -->
-        <div class="app-form-actions">
-          <button type="button" class="app-cancel-btn" id="appCancelBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="15,18 9,12 15,6" />
-            </svg>
-            Back to Crop
-          </button>
-          <button type="submit" class="app-submit-btn" id="appSubmitBtn">
-            Submit Verification
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="9,18 15,12 9,6" />
-            </svg>
-          </button>
-        </div>
-
-      </form>
-
-      <!-- Security footer -->
-      <p class="app-form-footer">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-        256-bit SSL encrypted · Data is never stored permanently
-      </p>
-
-    </div>
   </div>
+</div>
 
-  <script src="scanner.js"></script>
+<script src="scanner.js"></script>
 </body>
-
 </html>
