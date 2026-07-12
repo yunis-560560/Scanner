@@ -25,38 +25,38 @@
 /* ============================================================
    CONSTANTS
    ============================================================ */
-const CONF_THRESHOLD   = 0.60;   // confidence to enter "almost" state
-const CONF_CAPTURE     = 0.82;   // confidence to trigger auto-capture
+const CONF_THRESHOLD = 0.60;   // confidence to enter "almost" state
+const CONF_CAPTURE = 0.82;   // confidence to trigger auto-capture
 const HOLD_DURATION_MS = 1000;   // ms held at capture confidence before snap
 const ANALYSIS_RATE_MS = 180;    // frame analysis interval
-const QR_EXPIRE_SECS   = 300;    // 5 minutes
+const QR_EXPIRE_SECS = 300;    // 5 minutes
 
 /* ============================================================
    STATE
    ============================================================ */
 const state = {
-  phase:          'IDLE',       // IDLE | FRONT_SCAN | TRANSITION | BACK_SCAN | SUCCESS
-  stream:         null,
-  facingMode:     'environment',
-  torchOn:        false,
-  scanning:       false,
-  rafId:          null,
-  lastAnalysis:   0,
-  confidence:     0,
-  holdStart:      null,
-  captured:       false,
-  capturedFront:  null,
-  capturedBack:   null,
-  rawFront:       null,
-  rawBack:        null,
-  reCropping:     null,         // 'FRONT' | 'BACK' | null
-  prevEdgeMap:    null,         // for motion/steadiness detection
-  qrTimerId:      null,
-  qrSecsLeft:     QR_EXPIRE_SECS,
-  cropImageSrc:   null,         // captured raw frame
-  cropCorners:    { tl: {x:0, y:0}, tr: {x:0, y:0}, br: {x:0, y:0}, bl: {x:0, y:0} },
-  cropImageSize:  { w: 0, h: 0 }, // raw image width and height
-  demoTimerId:    null,         // timer ID for the 6-second onboarding guide
+  phase: 'IDLE',       // IDLE | FRONT_SCAN | TRANSITION | BACK_SCAN | SUCCESS
+  stream: null,
+  facingMode: 'environment',
+  torchOn: false,
+  scanning: false,
+  rafId: null,
+  lastAnalysis: 0,
+  confidence: 0,
+  holdStart: null,
+  captured: false,
+  capturedFront: null,
+  capturedBack: null,
+  rawFront: null,
+  rawBack: null,
+  reCropping: null,         // 'FRONT' | 'BACK' | null
+  prevEdgeMap: null,         // for motion/steadiness detection
+  qrTimerId: null,
+  qrSecsLeft: QR_EXPIRE_SECS,
+  cropImageSrc: null,         // captured raw frame
+  cropCorners: { tl: { x: 0, y: 0 }, tr: { x: 0, y: 0 }, br: { x: 0, y: 0 }, bl: { x: 0, y: 0 } },
+  cropImageSize: { w: 0, h: 0 }, // raw image width and height
+  demoTimerId: null,         // timer ID for the 6-second onboarding guide
 };
 
 /* ============================================================
@@ -66,81 +66,81 @@ const $ = id => document.getElementById(id);
 
 const dom = {
   /* Desktop */
-  desktopView:      $('desktopView'),
-  openScannerBtn:   $('openScannerBtn'),
+  desktopView: $('desktopView'),
+  openScannerBtn: $('openScannerBtn'),
   uploadPassportBtn: $('uploadPassportBtn'),
   passportFileInput: $('passportFileInput'),
-  qrImage:          $('qrImage'),
-  qrCountdown:      $('qrCountdown'),
+  qrImage: $('qrImage'),
+  qrCountdown: $('qrCountdown'),
 
   /* Mobile view */
-  mobileView:       $('mobileView'),
+  mobileView: $('mobileView'),
   scannerDemoOverlay: $('scannerDemoOverlay'),
-  demoSkipBtn:       $('demoSkipBtn'),
-  camVideo:         $('camVideo'),
+  demoSkipBtn: $('demoSkipBtn'),
+  camVideo: $('camVideo'),
   glareOverlayCanvas: $('glareOverlayCanvas'),
-  camCanvas:        $('camCanvas'),
-  mobTopbar:        null, // not individually referenced
+  camCanvas: $('camCanvas'),
+  mobTopbar: null, // not individually referenced
 
   /* Mobile step UI */
-  mobStep1:         $('mobStep1'),
-  mobStep2:         $('mobStep2'),
-  mobConnector:     $('mobConnector'),
-  closeMobileBtn:   $('closeMobileBtn'),
+  mobStep1: $('mobStep1'),
+  mobStep2: $('mobStep2'),
+  mobConnector: $('mobConnector'),
+  closeMobileBtn: $('closeMobileBtn'),
 
   /* Instruction */
   glareCriticalWarning: $('glareCriticalWarning'),
-  mobInstruction:   $('mobInstruction'),
-  mobInstrIcon:     $('mobInstrIcon'),
-  mobInstrText:     $('mobInstrText'),
+  mobInstruction: $('mobInstruction'),
+  mobInstrIcon: $('mobInstrIcon'),
+  mobInstrText: $('mobInstrText'),
 
   /* Guide */
-  scanGuide:        $('scanGuide'),
+  scanGuide: $('scanGuide'),
 
   /* Side label */
-  mobSideLabel:     $('mobSideLabel'),
-  mobSideBadge:     $('mobSideBadge'),
-  mobSideDesc:      $('mobSideDesc'),
+  mobSideLabel: $('mobSideLabel'),
+  mobSideBadge: $('mobSideBadge'),
+  mobSideDesc: $('mobSideDesc'),
 
   /* Status */
-  mobStatusDot:     $('mobStatusDot'),
-  mobStatusText:    $('mobStatusText'),
+  mobStatusDot: $('mobStatusDot'),
+  mobStatusText: $('mobStatusText'),
   mobDetectBarWrap: $('mobDetectBarWrap'),
-  mobDetectFill:    $('mobDetectFill'),
+  mobDetectFill: $('mobDetectFill'),
 
   /* Shutter / Capture */
-  shutterBtn:       $('shutterBtn'),
+  shutterBtn: $('shutterBtn'),
 
   /* Torch */
-  torchBtn:         $('torchBtn'),
+  torchBtn: $('torchBtn'),
 
   /* Transition */
   transitionOverlay: $('transitionOverlay'),
-  transContinueBtn:  $('transContinueBtn'),
-  transUploadBtn:    $('transUploadBtn'),
+  transContinueBtn: $('transContinueBtn'),
+  transUploadBtn: $('transUploadBtn'),
 
   /* Success */
-  successScreen:    $('successScreen'),
-  thumbFrontImg:    $('thumbFrontImg'),
-  thumbBackImg:     $('thumbBackImg'),
+  successScreen: $('successScreen'),
+  thumbFrontImg: $('thumbFrontImg'),
+  thumbBackImg: $('thumbBackImg'),
   successContinueBtn: $('successContinueBtn'),
-  reCropFrontBtn:   $('reCropFrontBtn'),
-  reCropBackBtn:    $('reCropBackBtn'),
-  successBackBtn:   $('successBackBtn'),
+  reCropFrontBtn: $('reCropFrontBtn'),
+  reCropBackBtn: $('reCropBackBtn'),
+  successBackBtn: $('successBackBtn'),
 
   /* Interactive Crop */
-  cropScreen:       $('cropScreen'),
-  cropImgPreview:   $('cropImgPreview'),
+  cropScreen: $('cropScreen'),
+  cropImgPreview: $('cropImgPreview'),
   cropGlareWarning: $('cropGlareWarning'),
-  cropMagnifier:    $('cropMagnifier'),
-  cropSvg:          $('cropSvg'),
-  cropPolygon:      $('cropPolygon'),
-  cropResetBtn:     $('cropResetBtn'),
-  cropConfirmBtn:   $('cropConfirmBtn'),
-  hTL:              $('hTL'),
-  hTR:              $('hTR'),
-  hBR:              $('hBR'),
-  hBL:              $('hBL'),
+  cropMagnifier: $('cropMagnifier'),
+  cropSvg: $('cropSvg'),
+  cropPolygon: $('cropPolygon'),
+  cropResetBtn: $('cropResetBtn'),
+  cropConfirmBtn: $('cropConfirmBtn'),
+  hTL: $('hTL'),
+  hTR: $('hTR'),
+  hBR: $('hBR'),
+  hBL: $('hBL'),
 };
 
 /* ============================================================
@@ -209,16 +209,16 @@ function makeSVG(path, w = 15, h = 15) {
   return `<svg width="${w}" height="${h}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
 }
 
-function iconPassport()  { return makeSVG('<rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="9" r="3"/>'); }
-function iconZoomIn()    { return makeSVG('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>'); }
-function iconZoomOut()   { return makeSVG('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>'); }
-function iconSteady()    { return makeSVG('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'); }
-function iconSun()       { return makeSVG('<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'); }
-function iconGlare()     { return makeSVG('<path d="M12 3v1m0 16v1M3 12h1m16 0h1M5.6 5.6l.7.7m11.4 11.4.7.7M18.4 5.6l-.7.7M6.3 17.3l-.7.7"/><circle cx="12" cy="12" r="4"/>'); }
-function iconHands()     { return makeSVG('<path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>'); }
-function iconAlign()     { return makeSVG('<line x1="3" y1="12" x2="21" y2="12"/><polyline points="8,7 3,12 8,17"/><polyline points="16,7 21,12 16,17"/>'); }
-function iconFocus()     { return makeSVG('<circle cx="12" cy="12" r="3"/><path d="M3 9V6a3 3 0 0 1 3-3h3M21 9V6a3 3 0 0 0-3-3h-3M3 15v3a3 3 0 0 0 3 3h3M21 15v3a3 3 0 0 1-3 3h-3"/>'); }
-function iconCheck()     { return makeSVG('<polyline points="20,6 9,17 4,12"/>'); }
+function iconPassport() { return makeSVG('<rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="9" r="3"/>'); }
+function iconZoomIn() { return makeSVG('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>'); }
+function iconZoomOut() { return makeSVG('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>'); }
+function iconSteady() { return makeSVG('<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'); }
+function iconSun() { return makeSVG('<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'); }
+function iconGlare() { return makeSVG('<path d="M12 3v1m0 16v1M3 12h1m16 0h1M5.6 5.6l.7.7m11.4 11.4.7.7M18.4 5.6l-.7.7M6.3 17.3l-.7.7"/><circle cx="12" cy="12" r="4"/>'); }
+function iconHands() { return makeSVG('<path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>'); }
+function iconAlign() { return makeSVG('<line x1="3" y1="12" x2="21" y2="12"/><polyline points="8,7 3,12 8,17"/><polyline points="16,7 21,12 16,17"/>'); }
+function iconFocus() { return makeSVG('<circle cx="12" cy="12" r="3"/><path d="M3 9V6a3 3 0 0 1 3-3h3M21 9V6a3 3 0 0 0-3-3h-3M3 15v3a3 3 0 0 0 3 3h3M21 15v3a3 3 0 0 1-3 3h-3"/>'); }
+function iconCheck() { return makeSVG('<polyline points="20,6 9,17 4,12"/>'); }
 
 /* ============================================================
    DEVICE DETECTION
@@ -290,11 +290,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // Show the passport application form with captured passport images
     const appFormScreen = document.getElementById('appFormScreen');
     const appThumbFront = document.getElementById('appThumbFront');
-    const appThumbBack  = document.getElementById('appThumbBack');
+    const appThumbBack = document.getElementById('appThumbBack');
 
     // Populate thumbnails from captured images
     if (appThumbFront && state.capturedFront) appThumbFront.src = state.capturedFront;
-    if (appThumbBack  && state.capturedBack)  appThumbBack.src  = state.capturedBack;
+    if (appThumbBack && state.capturedBack) appThumbBack.src = state.capturedBack;
 
     dom.successScreen.style.display = 'none';
     if (appFormScreen) {
@@ -401,7 +401,7 @@ function drawQRCode() {
 
   // Always use the deployed GitHub Pages URL so scanning on phone redirects to the live page
   const targetUrl = 'https://yunis-560560.github.io/Scanner/';
-  
+
   // Use a completely free, open QR code generator API
   img.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(targetUrl)}&ecc=M`;
 }
@@ -462,11 +462,12 @@ function redrawExpiredQR() {
    OPEN / CLOSE MOBILE SCANNER
    ============================================================ */
 async function openMobileScanner() {
+  resetOCRState();
   dom.desktopView.style.display = 'none';
   dom.mobileView.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
-  state.phase   = 'FRONT_SCAN';
+  state.phase = 'FRONT_SCAN';
   state.captured = false;
 
   setMobSideUI('front');
@@ -550,7 +551,7 @@ async function startCamera() {
   const constraints = {
     video: {
       facingMode: state.facingMode,
-      width:  { ideal: 1920 },
+      width: { ideal: 1920 },
       height: { ideal: 1080 },
       focusMode: 'continuous',
     },
@@ -624,13 +625,13 @@ function analyzeAndUpdate() {
   const sy = Math.round((vh - sh) / 2);
 
   const canvas = dom.camCanvas;
-  canvas.width  = sw;
+  canvas.width = sw;
   canvas.height = sh;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
 
   const imageData = ctx.getImageData(0, 0, sw, sh);
-  const analysis  = computeAnalysis(imageData.data, sw, sh);
+  const analysis = computeAnalysis(imageData.data, sw, sh);
 
   // Draw glare highlights on the overlay canvas
   if (dom.glareOverlayCanvas) {
@@ -659,8 +660,8 @@ function analyzeAndUpdate() {
 
 function computeAnalysis(data, w, h) {
   let brightnessSum = 0;
-  let glareCount    = 0;
-  let edgeSum       = 0;
+  let glareCount = 0;
+  let edgeSum = 0;
   const step = 3;
 
   // Luminance map
@@ -671,7 +672,7 @@ function computeAnalysis(data, w, h) {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
-      const r = data[i], g = data[i+1], b = data[i+2];
+      const r = data[i], g = data[i + 1], b = data[i + 2];
       const l = 0.299 * r + 0.587 * g + 0.114 * b;
       luma[y * w + x] = l;
       brightnessSum += l;
@@ -686,22 +687,22 @@ function computeAnalysis(data, w, h) {
   }
 
   const avgBrightness = brightnessSum / total;
-  const glareRatio    = glareCount / total;
+  const glareRatio = glareCount / total;
 
   // Sobel edge detection (sampled)
   let sampledPixels = 0;
-  let motionSum     = 0;
+  let motionSum = 0;
 
   for (let y = 1; y < h - 1; y += step) {
     for (let x = 1; x < w - 1; x += step) {
       const gx =
-        -luma[(y-1)*w + x-1] + luma[(y-1)*w + x+1]
-        - 2*luma[y*w + x-1]  + 2*luma[y*w + x+1]
-        - luma[(y+1)*w + x-1]+ luma[(y+1)*w + x+1];
+        -luma[(y - 1) * w + x - 1] + luma[(y - 1) * w + x + 1]
+        - 2 * luma[y * w + x - 1] + 2 * luma[y * w + x + 1]
+        - luma[(y + 1) * w + x - 1] + luma[(y + 1) * w + x + 1];
       const gy =
-        -luma[(y-1)*w + x-1] - 2*luma[(y-1)*w + x] - luma[(y-1)*w + x+1]
-        + luma[(y+1)*w + x-1]+ 2*luma[(y+1)*w + x] + luma[(y+1)*w + x+1];
-      const mag = Math.sqrt(gx*gx + gy*gy);
+        -luma[(y - 1) * w + x - 1] - 2 * luma[(y - 1) * w + x] - luma[(y - 1) * w + x + 1]
+        + luma[(y + 1) * w + x - 1] + 2 * luma[(y + 1) * w + x] + luma[(y + 1) * w + x + 1];
+      const mag = Math.sqrt(gx * gx + gy * gy);
       edgeSum += mag;
 
       // Motion: compare with previous frame
@@ -719,18 +720,18 @@ function computeAnalysis(data, w, h) {
   for (let y = 1; y < h - 1; y += step) {
     for (let x = 1; x < w - 1; x += step) {
       const gx =
-        -luma[(y-1)*w + x-1] + luma[(y-1)*w + x+1]
-        - 2*luma[y*w + x-1]  + 2*luma[y*w + x+1]
-        - luma[(y+1)*w + x-1]+ luma[(y+1)*w + x+1];
+        -luma[(y - 1) * w + x - 1] + luma[(y - 1) * w + x + 1]
+        - 2 * luma[y * w + x - 1] + 2 * luma[y * w + x + 1]
+        - luma[(y + 1) * w + x - 1] + luma[(y + 1) * w + x + 1];
       const gy =
-        -luma[(y-1)*w + x-1] - 2*luma[(y-1)*w + x] - luma[(y-1)*w + x+1]
-        + luma[(y+1)*w + x-1]+ 2*luma[(y+1)*w + x] + luma[(y+1)*w + x+1];
-      edgeMap[ei++] = Math.sqrt(gx*gx + gy*gy);
+        -luma[(y - 1) * w + x - 1] - 2 * luma[(y - 1) * w + x] - luma[(y - 1) * w + x + 1]
+        + luma[(y + 1) * w + x - 1] + 2 * luma[(y + 1) * w + x] + luma[(y + 1) * w + x + 1];
+      edgeMap[ei++] = Math.sqrt(gx * gx + gy * gy);
     }
   }
   state.prevEdgeMap = edgeMap;
 
-  const avgEdge   = edgeSum / sampledPixels;
+  const avgEdge = edgeSum / sampledPixels;
   const avgMotion = state.prevEdgeMap ? motionSum / sampledPixels : 0;
 
   // Steadiness: low motion = steady (score 0–1, 1 = very steady)
@@ -744,11 +745,11 @@ function computeAnalysis(data, w, h) {
   const fillRatio = brightArea / total;
 
   // Scores
-  const brightScore  = Math.min(1, avgBrightness / 165);       // 0-1 (passport is white/bright)
-  const edgeScore    = Math.min(1, avgEdge / 40);              // 0-1 (text/borders = edges)
+  const brightScore = Math.min(1, avgBrightness / 165);       // 0-1 (passport is white/bright)
+  const edgeScore = Math.min(1, avgEdge / 40);              // 0-1 (text/borders = edges)
   const balanceScore = Math.max(0, 1 - Math.abs(brightScore - 0.72) * 2.0);
-  const glareScore   = Math.max(0, 1 - glareRatio * 6);        // penalize overexposure
-  const fillScore    = fillRatio > 0.25 && fillRatio < 0.85    // reasonable fill
+  const glareScore = Math.max(0, 1 - glareRatio * 6);        // penalize overexposure
+  const fillScore = fillRatio > 0.25 && fillRatio < 0.85    // reasonable fill
     ? 1 - Math.abs(fillRatio - 0.55) * 1.5
     : 0.15;
 
@@ -757,11 +758,11 @@ function computeAnalysis(data, w, h) {
 
   // Overall confidence
   const raw = Math.max(0, Math.min(1,
-    brightScore  * 0.28 +
-    edgeScore    * 0.30 +
+    brightScore * 0.28 +
+    edgeScore * 0.30 +
     balanceScore * 0.18 +
-    glareScore   * 0.12 +
-    fillScore    * 0.12
+    glareScore * 0.12 +
+    fillScore * 0.12
   ));
 
   // Smooth confidence
@@ -898,9 +899,9 @@ function setGuideState(st) { // 'default' | 'almost' | 'success'
 
 function resetDetectionState() {
   state.confidence = 0;
-  state.holdStart  = null;
-  state.captured   = false;
-  state.prevEdgeMap= null;
+  state.holdStart = null;
+  state.captured = false;
+  state.prevEdgeMap = null;
   setGuideState('default');
   setMobStatus('init', 'Initializing…');
   setInstruction('fit_frame');
@@ -918,7 +919,7 @@ function setInstruction(key) {
   if (currentText === instr.text) return; // avoid unnecessary DOM thrash
 
   dom.mobInstrText.textContent = instr.text;
-  dom.mobInstrIcon.innerHTML   = instr.icon;
+  dom.mobInstrIcon.innerHTML = instr.icon;
 }
 
 /* ============================================================
@@ -926,12 +927,12 @@ function setInstruction(key) {
    ============================================================ */
 function setMobStatus(type, label) {
   dom.mobStatusDot.className = 'mob-status-dot';
-  if (type === 'init')      dom.mobStatusDot.classList.add('dot-ready');
-  if (type === 'ready')     dom.mobStatusDot.classList.add('dot-ready');
+  if (type === 'init') dom.mobStatusDot.classList.add('dot-ready');
+  if (type === 'ready') dom.mobStatusDot.classList.add('dot-ready');
   if (type === 'detecting') dom.mobStatusDot.classList.add('dot-detecting');
-  if (type === 'almost')    dom.mobStatusDot.classList.add('dot-almost');
-  if (type === 'success')   dom.mobStatusDot.classList.add('dot-success');
-  if (type === 'error')     dom.mobStatusDot.classList.add('dot-detecting'); // amber for error
+  if (type === 'almost') dom.mobStatusDot.classList.add('dot-almost');
+  if (type === 'success') dom.mobStatusDot.classList.add('dot-success');
+  if (type === 'error') dom.mobStatusDot.classList.add('dot-detecting'); // amber for error
   if (dom.mobStatusText.textContent !== label) {
     dom.mobStatusText.textContent = label;
   }
@@ -943,15 +944,15 @@ function setMobStatus(type, label) {
 function setMobSideUI(side) {
   if (side === 'front') {
     dom.mobSideBadge.textContent = 'FRONT';
-    dom.mobSideBadge.className   = 'mob-side-badge';
-    dom.mobSideDesc.textContent  = 'Place the passport front page completely inside the frame. Ensure all four corners are visible.';
+    dom.mobSideBadge.className = 'mob-side-badge';
+    dom.mobSideDesc.textContent = 'Place the passport front page completely inside the frame. Ensure all four corners are visible.';
     // Step indicator
     dom.mobStep1.classList.add('mob-step--active');
     dom.mobStep2.classList.remove('mob-step--active', 'mob-step--done');
   } else {
     dom.mobSideBadge.textContent = 'BACK';
-    dom.mobSideBadge.className   = 'mob-side-badge badge-back';
-    dom.mobSideDesc.textContent  = 'Turn the passport over and place the back page completely inside the frame.';
+    dom.mobSideBadge.className = 'mob-side-badge badge-back';
+    dom.mobSideDesc.textContent = 'Turn the passport over and place the back page completely inside the frame.';
     // Step indicator
     dom.mobStep1.classList.remove('mob-step--active');
     dom.mobStep1.classList.add('mob-step--done');
@@ -974,26 +975,26 @@ async function triggerCapture() {
   await sleep(350);
 
   // Capture ONLY the guide frame region (crop out fingers & background)
-  const video    = dom.camVideo;
-  const vw       = video.videoWidth  || 1280;
-  const vh       = video.videoHeight || 720;
-  const canvas   = dom.camCanvas;
-  const ctx      = canvas.getContext('2d');
+  const video = dom.camVideo;
+  const vw = video.videoWidth || 1280;
+  const vh = video.videoHeight || 720;
+  const canvas = dom.camCanvas;
+  const ctx = canvas.getContext('2d');
 
   // Get the guide frame's bounding rect on screen
-  const guide    = dom.scanGuide;
+  const guide = dom.scanGuide;
   const guideRect = guide.getBoundingClientRect();
 
   // Get the video element's bounding rect on screen
   // The video element fills the viewport (object-fit: cover)
-  const videoEl  = video;
-  const vidRect  = videoEl.getBoundingClientRect();
+  const videoEl = video;
+  const vidRect = videoEl.getBoundingClientRect();
 
   // Calculate the scale between displayed video pixels and actual video pixels
   // object-fit: cover scales the video to FILL the element, cropping edges
-  const displayW  = vidRect.width;
-  const displayH  = vidRect.height;
-  const videoAspect   = vw / vh;
+  const displayW = vidRect.width;
+  const displayH = vidRect.height;
+  const videoAspect = vw / vh;
   const displayAspect = displayW / displayH;
 
   let renderedW, renderedH, offsetX, offsetY;
@@ -1001,14 +1002,14 @@ async function triggerCapture() {
     // Video is wider — pillarboxed: height fills, width overflows
     renderedH = displayH;
     renderedW = displayH * videoAspect;
-    offsetX   = (renderedW - displayW) / 2;
-    offsetY   = 0;
+    offsetX = (renderedW - displayW) / 2;
+    offsetY = 0;
   } else {
     // Video is taller — letterboxed: width fills, height overflows
     renderedW = displayW;
     renderedH = displayW / videoAspect;
-    offsetX   = 0;
-    offsetY   = (renderedH - displayH) / 2;
+    offsetX = 0;
+    offsetY = (renderedH - displayH) / 2;
   }
 
   const scaleX = vw / renderedW;
@@ -1016,16 +1017,16 @@ async function triggerCapture() {
 
   // Guide position relative to the video element display area
   const guideX = guideRect.left - vidRect.left;
-  const guideY = guideRect.top  - vidRect.top;
+  const guideY = guideRect.top - vidRect.top;
 
   // Map to actual video pixel coordinates
   const srcX = Math.round((guideX + offsetX) * scaleX);
   const srcY = Math.round((guideY + offsetY) * scaleY);
-  const srcW = Math.round(guideRect.width  * scaleX);
+  const srcW = Math.round(guideRect.width * scaleX);
   const srcH = Math.round(guideRect.height * scaleY);
 
   // Output canvas = guide size (inside the box only)
-  canvas.width  = srcW;
+  canvas.width = srcW;
   canvas.height = srcH;
 
   // Draw only the cropped guide region
@@ -1067,7 +1068,7 @@ async function startBackScan() {
   dom.transitionOverlay.style.display = 'none';
   dom.mobileView.style.display = 'flex';
 
-  state.phase    = 'BACK_SCAN';
+  state.phase = 'BACK_SCAN';
   state.captured = false;
   resetDetectionState();
   setMobSideUI('back');
@@ -1218,7 +1219,7 @@ function openCropScreen(rawImageSrc, width, height) {
 
   state.cropImageSrc = rawImageSrc;
   state.cropImageSize = { w: width, h: height };
-  
+
   // Hide glare warning initially
   if (dom.cropGlareWarning) dom.cropGlareWarning.style.display = 'none';
 
@@ -1229,7 +1230,7 @@ function openCropScreen(rawImageSrc, width, height) {
   }
 
   dom.cropImgPreview.src = rawImageSrc;
-  
+
   dom.cropImgPreview.onload = () => {
     initCropUI();
   };
@@ -1242,21 +1243,22 @@ function openCropScreen(rawImageSrc, width, height) {
    Reads and processes uploaded passport images
    ============================================================ */
 function handlePassportFileUpload(e) {
+  resetOCRState();
   const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(event) {
+  reader.onload = function (event) {
     const dataURL = event.target.result;
     const img = new Image();
-    img.onload = function() {
+    img.onload = function () {
       // Hide desktop view and transition overlay
       dom.desktopView.style.display = 'none';
       dom.transitionOverlay.style.display = 'none';
-      
+
       // Stop camera if running
       stopCamera();
-      
+
       // Open crop screen with the uploaded image and its dimensions
       openCropScreen(dataURL, img.width, img.height);
     };
@@ -1300,7 +1302,7 @@ function isCornerFlush(imgData, corner, threshold) {
   for (let y = startY; y < endY; y++) {
     for (let x = startX; x < endX; x++) {
       const idx = (y * w + x) * 4;
-      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
       const luma = 0.299 * r + 0.587 * g + 0.114 * b;
       if (luma > threshold) {
         brightCount++;
@@ -1314,7 +1316,7 @@ function isCornerFlush(imgData, corner, threshold) {
 
 function initCropUI() {
   const rect = dom.cropImgPreview.getBoundingClientRect();
-  
+
   // Set up offscreen canvas for magnification zoom source
   offscreenCropCanvas = document.createElement('canvas');
   offscreenCropCanvas.width = state.cropImageSize.w;
@@ -1338,7 +1340,7 @@ function initCropUI() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(dom.cropImgPreview, 0, 0, w, h);
     const imgData = ctx.getImageData(0, 0, w, h);
-    
+
     // Check for glare/over-lighting on captured image
     const hasGlare = checkImageGlare(imgData);
     if (hasGlare && dom.cropGlareWarning) {
@@ -1350,7 +1352,7 @@ function initCropUI() {
     const total = w * h;
     const step = 4;
     for (let i = 0; i < imgData.data.length; i += 4 * step) {
-      const r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
+      const r = imgData.data[i], g = imgData.data[i + 1], b = imgData.data[i + 2];
       sumLuma += (0.299 * r + 0.587 * g + 0.114 * b);
     }
     const avgLuma = sumLuma / (total / step);
@@ -1404,16 +1406,16 @@ function checkImageGlare(imgData) {
   let glareCount = 0;
   const total = imgData.width * imgData.height;
   const step = 3; // sample every 3rd pixel
-  
+
   for (let i = 0; i < data.length; i += 4 * step) {
-    const r = data[i], g = data[i+1], b = data[i+2];
+    const r = data[i], g = data[i + 1], b = data[i + 2];
     const luma = 0.299 * r + 0.587 * g + 0.114 * b;
     // Highlighted pixels (pure white over-lit reflection)
     if (luma > 230) {
       glareCount++;
     }
   }
-  
+
   const glareRatio = glareCount / (total / step);
   return glareRatio > 0.015; // Warning triggers if glare exceeds 1.5% of total pixels
 }
@@ -1425,33 +1427,33 @@ function detectDocumentCorners(imgData) {
   const w = imgData.width;
   const h = imgData.height;
   const data = imgData.data;
-  
+
   // Calculate average brightness of the image to set an adaptive threshold
   let sumLuma = 0;
   const total = w * h;
   const step = 4; // Sample every 4th pixel to make it fast
-  
+
   for (let i = 0; i < data.length; i += 4 * step) {
-    const r = data[i], g = data[i+1], b = data[i+2];
+    const r = data[i], g = data[i + 1], b = data[i + 2];
     sumLuma += (0.299 * r + 0.587 * g + 0.114 * b);
   }
   const avgLuma = sumLuma / (total / step);
-  
+
   // Set threshold slightly above average to distinguish white passport from darker background
   const threshold = Math.max(90, Math.min(180, avgLuma * 1.15));
-  
+
   // Find extreme boundaries that form the document shape
   let minSum = Infinity, maxSum = -Infinity;
   let minDiff = Infinity, maxDiff = -Infinity;
-  
+
   let tl = null, tr = null, br = null, bl = null;
-  
+
   for (let y = 0; y < h; y += 3) {
     for (let x = 0; x < w; x += 3) {
       const idx = (y * w + x) * 4;
-      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
       const luma = 0.299 * r + 0.587 * g + 0.114 * b;
-      
+
       if (luma > threshold) {
         // Top-Left minimizes x + y
         const sum = x + y;
@@ -1478,28 +1480,28 @@ function detectDocumentCorners(imgData) {
       }
     }
   }
-  
+
   // Validate detected coordinate points
   if (!tl || !tr || !br || !bl) return null;
-  
+
   // Quadrant-based constraints: corners must reside in their respective outer quadrants
   // (prevents incorrect internal locking onto faces, text blocks, stamps, etc.)
   if (tl.x > w * 0.40 || tl.y > h * 0.40) return null;
   if (tr.x < w * 0.60 || tr.y > h * 0.40) return null;
   if (br.x < w * 0.60 || br.y < h * 0.60) return null;
   if (bl.x > w * 0.40 || bl.y < h * 0.60) return null;
-  
+
   // Check if coordinates represent a reasonable size block (e.g. at least 45% of image size)
   if (Math.abs(tr.x - tl.x) < w * 0.45 || Math.abs(br.y - tr.y) < h * 0.45) {
     return null;
   }
-  
+
   return { tl, tr, br, bl };
 }
 
 function updateCropPolygon() {
   const { tl, tr, br, bl } = state.cropCorners;
-  
+
   setHandlePos(dom.hTL, tl);
   setHandlePos(dom.hTR, tr);
   setHandlePos(dom.hBR, br);
@@ -1550,17 +1552,17 @@ let offscreenCropCanvas = null;
 function setupDragHandlers() {
   const svg = dom.cropSvg;
   const container = svg.parentElement; // .crop-view-container
-  
+
   container.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     // Find closest handle within a generous 65px touch target area
     let closestId = null;
     let minD = 65;
-    
+
     for (const [key, pos] of Object.entries(state.cropCorners)) {
       const dx = pos.x - x;
       const dy = pos.y - y;
@@ -1570,7 +1572,7 @@ function setupDragHandlers() {
         closestId = key;
       }
     }
-    
+
     if (closestId) {
       activeHandleId = closestId;
       container.setPointerCapture(e.pointerId);
@@ -1643,15 +1645,15 @@ function updateMagnifier(x, y) {
   mCtx.strokeStyle = '#00C853';
   mCtx.lineWidth = 2.5;
   mCtx.beginPath();
-  
+
   // Horizontal line
   mCtx.moveTo(0, size / 2);
   mCtx.lineTo(size, size / 2);
-  
+
   // Vertical line
   mCtx.moveTo(size / 2, 0);
   mCtx.lineTo(size / 2, size);
-  
+
   mCtx.stroke();
 }
 
@@ -1727,13 +1729,12 @@ function confirmCropAdjustment() {
       if (state.reCropping === 'FRONT') {
         state.capturedFront = flattenedDataURL;
         state.reCropping = null;
-        triggerMockOCR();
+        extractPassportData(state.capturedFront);
         updateSuccessScreenState();
         showSuccessScreen();
       } else if (state.reCropping === 'BACK') {
         state.capturedBack = flattenedDataURL;
         state.reCropping = null;
-        triggerMockOCR();
         updateSuccessScreenState();
         showSuccessScreen();
       } else if (state.phase === 'FRONT_SCAN') {
@@ -1745,7 +1746,7 @@ function confirmCropAdjustment() {
         state.phase = 'SUCCESS';
         stopCamera();
         dom.mobileView.style.display = 'none';
-        triggerMockOCR();
+        extractPassportData(state.capturedFront);
         updateSuccessScreenState();
         showSuccessScreen();
       }
@@ -1829,9 +1830,9 @@ function warpPerspectiveJS(srcImgData, destImgData, h) {
 
         for (let c = 0; c < 4; c++) {
           const val = (1 - xWeight) * (1 - yWeight) * sData[idx00 + c] +
-                      xWeight * (1 - yWeight) * sData[idx10 + c] +
-                      (1 - xWeight) * yWeight * sData[idx01 + c] +
-                      xWeight * yWeight * sData[idx11 + c];
+            xWeight * (1 - yWeight) * sData[idx10 + c] +
+            (1 - xWeight) * yWeight * sData[idx01 + c] +
+            xWeight * yWeight * sData[idx11 + c];
           dData[destIdx + c] = Math.round(val);
         }
       } else {
@@ -1868,59 +1869,128 @@ function triggerMockVerification() {
 
   // Sample passport cropped images (using relative paths for offline and local/server support)
   const mockFrontImage = 'sample_passport.png';
-  const mockBackImage  = 'sample_passport_back.png';
+  const mockBackImage = 'sample_passport_back.png';
 
   state.capturedFront = mockFrontImage;
-  state.capturedBack  = mockBackImage;
-  state.cropImageSrc  = mockFrontImage;
+  state.capturedBack = mockBackImage;
+  state.cropImageSrc = mockFrontImage;
   state.cropImageSize = { w: 1000, h: 636 };
 
-  state.rawFront      = mockFrontImage;
-  state.rawBack       = mockBackImage;
-  state.rawFrontSize  = { w: 1000, h: 636 };
-  state.rawBackSize   = { w: 1000, h: 636 };
+  state.rawFront = mockFrontImage;
+  state.rawBack = mockBackImage;
+  state.rawFrontSize = { w: 1000, h: 636 };
+  state.rawBackSize = { w: 1000, h: 636 };
 
-  triggerMockOCR();
+  extractPassportData(state.capturedFront);
   updateSuccessScreenState();
   showSuccessScreen();
 }
 
-function triggerMockOCR() {
-  const fields = {
-    surname: 'SHAIK',
-    givenNames: 'MOHAMMAD YUNIS',
-    dob: '20/11/2001',
-    gender: 'M',
-    nationality: 'INDIAN',
-    placeOfBirth: 'ATMAKUR, ANDHRA PRADESH',
-    passportNo: 'AE471374',
-    countryCode: 'IND',
-    issueDate: '23/07/2025',
-    expiryDate: '22/07/2035',
-    placeOfIssue: 'VIJAYAWADA',
-    fatherName: 'FAREED BASHA SHAIK',
-    motherName: 'BEEBJAN SHAIK',
-    spouseName: '',
-    fileNo: 'VJ6065266422725',
-    address: '2-202-1A, JR PETA, ATMAKUR, SRI POTTI SRIRAMULU NELLORE, PIN:524322, ANDHRA PRADESH, INDIA',
-    city: 'Atmakur',
-    state: 'Andhra Pradesh',
-    pin: '524322',
-    country: 'India',
-    mrz1: 'P<INDSHAIK<<MOHAMMAD<YUNIS<<<<<<<<<<<<<<<<<<',
-    mrz2: 'AE471374<2IND0111207M35072236065266422725<34'
-  };
-
-  for (const [idSuffix, value] of Object.entries(fields)) {
+function resetOCRState() {
+  const fields = ['surname', 'givenNames', 'dob', 'gender', 'nationality', 'placeOfBirth', 'passportNo', 'countryCode', 'issueDate', 'expiryDate', 'placeOfIssue', 'fatherName', 'motherName', 'spouseName', 'fileNo', 'address', 'city', 'state', 'pin', 'country', 'mrz1', 'mrz2'];
+  for (const idSuffix of fields) {
     const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
     const inputEl = document.getElementById(elId);
-    if (inputEl) {
-      inputEl.value = value;
-    }
+    if (inputEl) inputEl.value = '';
   }
-
   const decCheck = document.getElementById('appDeclaration');
-  if (decCheck) decCheck.checked = true;
+  if (decCheck) decCheck.checked = false;
+  
+  state.capturedFront = null;
+  state.capturedBack = null;
+  state.rawFront = null;
+  state.rawBack = null;
+}
+
+async function extractPassportData(imageData) {
+  try {
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = true;
+      dom.successContinueBtn.textContent = 'Extracting Data...';
+    }
+
+    const worker = await Tesseract.createWorker('eng');
+    const ret = await worker.recognize(imageData);
+    const text = ret.data.text;
+    await worker.terminate();
+
+    const lines = text.split('\n').map(l => l.replace(/\s/g, '').toUpperCase());
+    const mrzLines = lines.filter(l => l.includes('<') && l.length > 30);
+    
+    if (mrzLines.length < 2) {
+      alert("Passport data could not be verified. Please scan or upload the passport again.");
+      if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+      return;
+    }
+    
+    const mrz1 = mrzLines[mrzLines.length - 2];
+    const mrz2 = mrzLines[mrzLines.length - 1];
+    
+    let surname = '';
+    let givenNames = '';
+    const namePart = mrz1.substring(5).split('<<');
+    if (namePart.length > 0) surname = namePart[0].replace(/</g, ' ').trim();
+    if (namePart.length > 1) givenNames = namePart[1].replace(/</g, ' ').trim();
+    
+    const passportNo = mrz2.substring(0, 9).replace(/</g, '');
+    const nat = mrz2.substring(10, 13);
+    const dobRaw = mrz2.substring(13, 19);
+    const gender = mrz2.substring(20, 21);
+    const expRaw = mrz2.substring(21, 27);
+    
+    const visibleText = text.replace(mrz1, '').replace(mrz2, '');
+
+    if (!surname || !passportNo || passportNo.length < 5) {
+       alert("Passport data could not be verified. Please scan or upload the passport again.");
+       if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+       return;
+    }
+
+    const surnameValid = visibleText.includes(surname);
+    
+    if (!surnameValid) {
+       alert("Passport data could not be verified. Please scan or upload the passport again.");
+       if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+       return;
+    }
+
+    const formatMRZDate = (yymmdd) => {
+       const yr = parseInt(yymmdd.substring(0,2));
+       const y = yr > 50 ? 1900 + yr : 2000 + yr;
+       return `${yymmdd.substring(4,6)}/${yymmdd.substring(2,4)}/${y}`;
+    };
+
+    const parsedData = {
+      surname: surname,
+      givenNames: givenNames,
+      passportNo: passportNo,
+      countryCode: nat,
+      dob: formatMRZDate(dobRaw),
+      expiryDate: formatMRZDate(expRaw),
+      gender: gender === 'M' ? 'Male (M)' : gender === 'F' ? 'Female (F)' : gender,
+      mrz1: mrz1,
+      mrz2: mrz2
+    };
+
+    for (const [idSuffix, value] of Object.entries(parsedData)) {
+      const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
+      const inputEl = document.getElementById(elId);
+      if (inputEl) inputEl.value = value;
+    }
+    
+    const decCheck = document.getElementById('appDeclaration');
+    if (decCheck) decCheck.checked = true;
+
+    if (dom.successContinueBtn) {
+      dom.successContinueBtn.disabled = false;
+      dom.successContinueBtn.innerHTML = `Continue to Application <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>`;
+    }
+
+  } catch (err) {
+    console.error("OCR Error:", err);
+    alert("Passport data could not be verified. Please scan or upload the passport again.");
+    if (dom.successContinueBtn) dom.successContinueBtn.textContent = 'Continue to Application';
+  }
 }
 
 function updateSuccessScreenState() {
@@ -1932,9 +2002,9 @@ function updateSuccessScreenState() {
   }
 
   const appThumbFront = document.getElementById('appThumbFront');
-  const appThumbBack  = document.getElementById('appThumbBack');
+  const appThumbBack = document.getElementById('appThumbBack');
   if (appThumbFront && state.capturedFront) appThumbFront.src = state.capturedFront;
-  if (appThumbBack && state.capturedBack)  appThumbBack.src  = state.capturedBack;
+  if (appThumbBack && state.capturedBack) appThumbBack.src = state.capturedBack;
 
   if (dom.successContinueBtn) {
     if (state.capturedFront && state.capturedBack) {
