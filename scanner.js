@@ -1895,6 +1895,7 @@ async function preprocessImage(imageSrc, contrast = 1.5, brightness = 10) {
   });
 }
 
+
 async function extractPassportData(frontImage, backImage) {
   try {
     if (dom.successContinueBtn) {
@@ -1904,16 +1905,13 @@ async function extractPassportData(frontImage, backImage) {
 
     const worker = await Tesseract.createWorker('eng');
     
-    // Function to run OCR with optional preprocessing
     const runOCR = async (imageSrc, isFront) => {
       if (!imageSrc) return null;
       let ret = await worker.recognize(imageSrc);
-      
-      // Check confidence
       let conf = ret.data.confidence;
       console.log(`Initial OCR Confidence (${isFront ? 'Front' : 'Back'}): ${conf}%`);
       
-      if (conf < 85) { // 95 is too strict for Tesseract on passports, 85 is realistic
+      if (conf < 85) { 
         console.log('Confidence low. Re-running with enhanced preprocessing...');
         const enhancedImg = await preprocessImage(imageSrc, 1.8, 15);
         const retEnhanced = await worker.recognize(enhancedImg);
@@ -1931,28 +1929,30 @@ async function extractPassportData(frontImage, backImage) {
 
     const p = {}; // parsed data
 
-    // --- HELPER FUNCTIONS ---
     const cleanName = s => s.replace(/[^a-zA-Z\s]/g, '').trim().replace(/\s+[a-zA-Z]{1,2}$/, '').trim();
     const isValidName = s => s && s.length >= 3 && /[a-zA-Z]{2,}/.test(s);
-    const normMRZ = l => l.replace(/[^A-Z0-9<]/g, '<').replace(/[KLSX]{3,}/g, m => '<'.repeat(m.length)).replace(/^P[^<]/, 'P<');
+    const normMRZ = l => l.replace(/[^A-Z0-9<]/g, '<').replace(/^P[^<]/, 'P<');
 
     // =========================================================
-    // FRONT PAGE PARSING (Layout Aware & MRZ Validation)
+    // FRONT PAGE PARSING
     // =========================================================
     if (frontData) {
-      const lines = frontData.lines;
-      const rawTextLines = lines.map(l => l.text.replace(/\s/g, '').toUpperCase());
-
-      // ---- 1. MRZ Parsing ----
-      const mrzCandidates = rawTextLines.filter(l => l.length >= 35).map(normMRZ);
+      console.log('--- FRONT RAW TEXT ---');
+      console.log(frontData.text);
+      const rawTextLines = frontData.text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+      const mrzLines = rawTextLines.map(l => l.replace(/\s/g, '').toUpperCase()).filter(l => l.length >= 35).map(normMRZ);
       
-      if (mrzCandidates.length >= 2) {
-        const mrz1 = mrzCandidates[mrzCandidates.length - 2];
-        const mrz2 = mrzCandidates[mrzCandidates.length - 1];
+      if (mrzLines.length >= 2) {
+        let mrz1 = mrzLines[mrzLines.length - 2];
+        const mrz2 = mrzLines[mrzLines.length - 1];
         p.mrz1 = mrz1;
         p.mrz2 = mrz2;
 
-        // Names from MRZ1: P<IND[SURNAME]<<[GIVEN]<<<
+        // Fix Tesseract misreading '<<' as 'SS' in MRZ1
+        if (!mrz1.includes('<<') && mrz1.includes('SS')) {
+           mrz1 = mrz1.replace(/SS/, '<<');
+        }
+
         const nameStr = mrz1.replace(/^P<[A-Z]{3}/, '');
         const parts = nameStr.split('<<');
         const sn = (parts[0] || '').replace(/</g, ' ').trim();
@@ -1960,7 +1960,6 @@ async function extractPassportData(frontImage, backImage) {
         if (sn && sn.length > 1 && !/^[<\s]+$/.test(sn)) p.surname = sn;
         if (gn && gn.length > 1 && !/^[<\s]+$/.test(gn)) p.givenNames = gn;
 
-        // Passport number (MRZ2 first 9 chars, must include leading letter)
         const pnoMatch = mrz2.match(/^([A-Z][A-Z0-9]{1,8})</);
         if (pnoMatch) p.passportNo = pnoMatch[1];
         else {
@@ -1968,13 +1967,11 @@ async function extractPassportData(frontImage, backImage) {
           if (pno.length >= 5) p.passportNo = pno;
         }
 
-        // Country code
         let cc = mrz2.substring(10, 13).replace(/[^A-Z]/g, '');
         cc = cc.replace(/1/g, 'I').replace(/0/g, 'D');
         p.countryCode = cc.length === 3 ? cc : 'IND';
         p.nationality = p.countryCode === 'IND' ? 'INDIAN' : p.countryCode;
 
-        // DOB
         const dobRaw = mrz2.substring(13, 19);
         if (/^\d{6}$/.test(dobRaw)) {
           const yr = parseInt(dobRaw.substring(0,2));
@@ -1982,13 +1979,10 @@ async function extractPassportData(frontImage, backImage) {
           p.dob = `${dobRaw.substring(4,6)}/${dobRaw.substring(2,4)}/${y}`;
         }
 
-        // Gender
         const gc = mrz2[20];
         if (gc === 'M') p.gender = 'M';
         else if (gc === 'F') p.gender = 'F';
-        else p.gender = frontData.text.match(/\bFEMALE\b/i) ? 'F' : frontData.text.match(/\bMALE\b/i) ? 'M' : '';
 
-        // Expiry Date
         const expRaw = mrz2.substring(21, 27);
         if (/^\d{6}$/.test(expRaw)) {
           const yr = parseInt(expRaw.substring(0,2));
@@ -1997,7 +1991,7 @@ async function extractPassportData(frontImage, backImage) {
         }
       }
 
-      // ---- 2. Issue Date via Layout/Pattern ----
+      // Dates (Issue Date)
       const dates = [];
       const dr = /\b(\d{2})[\/\-](\d{2})[\/\-](\d{4})\b/g;
       let dm;
@@ -2012,95 +2006,169 @@ async function extractPassportData(frontImage, backImage) {
         if (middle) p.issueDate = middle.str;
       }
 
-      // ---- 3. Place of Issue & Birth via Layout (Y-coordinate proximity) ----
-      const findTextBelow = (keyword) => {
-        const labelLine = lines.find(l => l.text.toUpperCase().includes(keyword));
-        if (!labelLine) return null;
+      // Place of Issue & Birth
+      // We will look for city names and state names in the text to avoid bounding box issues.
+      const CITIES = ['HYDERABAD','DELHI','MUMBAI','KOLKATA','CHENNAI','BANGALORE','LUCKNOW','PATNA','BHOPAL','JAIPUR','PUNE','AHMEDABAD','SURAT','NAGPUR','INDORE','CHANDIGARH','BHUBANESWAR','GUWAHATI','THIRUVANANTHAPURAM','KOCHI','VISAKHAPATNAM','VIJAYAWADA','WARANGAL'];
+      const STATES = ['ANDHRA PRADESH','TELANGANA','KARNATAKA','MAHARASHTRA','UTTAR PRADESH','RAJASTHAN','GUJARAT','DELHI','TAMIL NADU','KERALA','WEST BENGAL','MADHYA PRADESH','BIHAR','ODISHA','PUNJAB','HARYANA','JHARKHAND','ASSAM','CHHATTISGARH','UTTARAKHAND','GOA'];
+
+      for (let i = 0; i < rawTextLines.length; i++) {
+        const line = rawTextLines[i].toUpperCase();
         
-        // Find lines below this label line (larger y0) but somewhat aligned (x0)
-        const candidates = lines.filter(l => 
-          l.bbox.y0 > labelLine.bbox.y1 && 
-          Math.abs(l.bbox.x0 - labelLine.bbox.x0) < 200 &&
-          l.text.length > 2
-        ).sort((a, b) => a.bbox.y0 - b.bbox.y0);
-
-        if (candidates.length > 0) {
-           return candidates[0].text.replace(/[^a-zA-Z\s]/g, '').trim();
+        // Place of Issue
+        if (!p.placeOfIssue) {
+          const cityMatch = CITIES.find(c => line.includes(c));
+          if (cityMatch && (line.includes('ISSUE') || rawTextLines[Math.max(0, i-1)].toUpperCase().includes('ISSUE'))) {
+            p.placeOfIssue = cityMatch.charAt(0) + cityMatch.slice(1).toLowerCase();
+          } else if (line.includes('PLACE OF ISSUE')) {
+            const nextLine = (rawTextLines[i+1] || '').replace(/[^a-zA-Z\s]/g, '').trim();
+            if (nextLine.length > 2 && !/DATE|NATIONALITY|SEX/.test(nextLine.toUpperCase())) {
+              p.placeOfIssue = nextLine;
+            }
+          }
         }
-        return null;
-      };
 
-      if (!p.placeOfIssue) p.placeOfIssue = findTextBelow('ISSUE');
-      if (!p.placeOfBirth) p.placeOfBirth = findTextBelow('BIRTH');
+        // Place of Birth
+        if (!p.placeOfBirth) {
+          if (line.includes('PLACE OF BIRTH') || line.includes('BIRTH PLACE')) {
+            const nextLine = (rawTextLines[i+1] || '').replace(/[^a-zA-Z\s,]/g, '').trim();
+            if (nextLine.length > 3 && !/DATE|NATIONALITY|SEX/.test(nextLine.toUpperCase())) {
+              p.placeOfBirth = nextLine;
+            }
+          } else {
+             // Look for state name in line (e.g. PITHAPURAM, ANDHRA PRADESH)
+             const stMatch = STATES.find(s => line.includes(s));
+             if (stMatch && !line.includes('INDIA')) {
+               p.placeOfBirth = line.replace(/[^a-zA-Z\s,]/g, '').trim();
+             }
+          }
+        }
+      }
     }
 
     // =========================================================
-    // BACK PAGE PARSING (Strict Layout & Coordinates)
+    // BACK PAGE PARSING
     // =========================================================
     if (backData) {
-      const lines = backData.lines;
+      console.log('--- BACK RAW TEXT ---');
+      console.log(backData.text);
+      const rawTextLines = backData.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
       
-      const findValueForLabel = (keywordPatterns) => {
-        // Find best matching label line
-        const labelLine = lines.find(l => keywordPatterns.some(kw => l.text.toUpperCase().includes(kw)));
-        if (!labelLine) return null;
+      let father = null, mother = null, spouse = null;
+      let addrLines = [];
+      let fileNo = null;
 
-        // Find the text line immediately below it
-        const candidates = lines.filter(l => 
-          l.bbox.y0 > (labelLine.bbox.y0 + 5) && 
-          l.text.trim().length > 2 &&
-          !/(FATHER|MOTHER|SPOUSE|ADDRESS|FILE NO|PIN)/i.test(l.text) // don't grab another label
-        ).sort((a, b) => a.bbox.y0 - b.bbox.y0);
+      // Extract File No first via regex
+      for (const line of rawTextLines) {
+        const fm = line.match(/\b([A-Z]{2,4}\d{7,15})\b/);
+        if (fm) fileNo = fm[1];
+      }
+      if (fileNo) p.fileNo = fileNo;
 
-        if (candidates.length > 0) return cleanName(candidates[0].text);
-        return null;
-      };
+      // Check if labels exist. If they don't, Tesseract missed them (common for tiny Indian passport back page fonts)
+      const hasLabels = rawTextLines.some(l => /FATHER|MOTHER|SPOUSE|ADDRESS|PITA|MATA/i.test(l));
 
-      p.fatherName = findValueForLabel(['FATHER', 'PITA', 'GUARDIAN']);
-      p.motherName = findValueForLabel(['MOTHER', 'MATA']);
-      p.spouseName = findValueForLabel(['SPOUSE', 'PATNI', 'PATI']);
+      if (hasLabels) {
+        // Label-based parsing
+        const LABEL_KEYWORDS = ['FATHER','MOTHER','SPOUSE','ADDRESS','FILE NO','FILE ALO','OLD PASSPORT','PITA','MATA','PATNI','PATA'];
+        let collectAddr = false;
 
-      // File Number Regex
-      const fileMatch = backData.text.match(/\b([A-Z]{2,4}\d{7,15})\b/);
-      if (fileMatch) p.fileNo = fileMatch[1];
+        for (let i = 0; i < rawTextLines.length; i++) {
+          const u = rawTextLines[i].toUpperCase();
 
-      // Address Block Extraction using bounding boxes
-      const addrLabelLine = lines.find(l => /ADDRESS|PATA/i.test(l.text));
-      if (addrLabelLine) {
-        // Get all lines below address label until we hit Old Passport or File No
-        const addrLines = lines.filter(l => 
-           l.bbox.y0 > addrLabelLine.bbox.y1 &&
-           !/OLD PASSPORT|FILE NO/i.test(l.text) &&
-           l.bbox.y0 < (lines.find(ol => /OLD PASSPORT|FILE NO/i.test(ol.text))?.bbox.y0 || Infinity)
-        ).sort((a, b) => a.bbox.y0 - b.bbox.y0).map(l => l.text.trim());
-
-        if (addrLines.length > 0) {
-          const cleanAddrLines = addrLines.filter(line => {
-            const hasAddrContent = /\d/.test(line) || /[,]/.test(line);
-            const isNameLine = [p.fatherName, p.motherName, p.spouseName].some(n => n && line.toUpperCase().includes(n.toUpperCase().split(' ')[0]));
-            return hasAddrContent || !isNameLine;
-          });
-
-          p.address = cleanAddrLines.join('\n');
-          
-          // Split address smartly
-          const STATES = ['ANDHRA PRADESH','TELANGANA','KARNATAKA','MAHARASHTRA','UTTAR PRADESH','RAJASTHAN','GUJARAT','DELHI','TAMIL NADU','KERALA','WEST BENGAL','MADHYA PRADESH','BIHAR','ODISHA','PUNJAB','HARYANA','JHARKHAND','ASSAM','CHHATTISGARH','UTTARAKHAND','GOA'];
-          for (const line of cleanAddrLines) {
-            if (!p.state) {
-              const st = STATES.find(s => line.toUpperCase().includes(s));
-              if (st) p.state = st.split(' ').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
-            }
-            if (!p.city) {
-              const pm = line.match(/(.+?),?\s*\b\d{6}\b/);
-              if (pm) {
-                const parts = pm[1].split(/[,]+/).map(s => s.trim()).filter(s => s.length > 2);
-                p.city = parts.pop()?.replace(/[^a-zA-Z\s]/g, '').trim();
+          if (!p.fatherName && (u.includes('FATHER') || u.includes('LEGAL GUARDIAN'))) {
+            for (let j = i + 1; j < Math.min(i + 3, rawTextLines.length); j++) {
+              const val = cleanName(rawTextLines[j]);
+              if (isValidName(val) && !LABEL_KEYWORDS.some(k => rawTextLines[j].toUpperCase().includes(k))) {
+                p.fatherName = val; break;
               }
             }
-            if (!p.pin) {
-              const pinMatch = line.match(/\b(\d{6})\b/);
-              if (pinMatch) p.pin = pinMatch[1];
+          } else if (!p.motherName && (u.includes('MOTHER') || u.includes('MATA'))) {
+            for (let j = i + 1; j < Math.min(i + 3, rawTextLines.length); j++) {
+              const val = cleanName(rawTextLines[j]);
+              if (isValidName(val) && !LABEL_KEYWORDS.some(k => rawTextLines[j].toUpperCase().includes(k))) {
+                p.motherName = val; break;
+              }
             }
+          } else if (!p.spouseName && (u.includes('SPOUSE') || u.includes('PATNI') || u.includes('PATI'))) {
+            for (let j = i + 1; j < Math.min(i + 3, rawTextLines.length); j++) {
+              const val = cleanName(rawTextLines[j]);
+              if (isValidName(val) && !LABEL_KEYWORDS.some(k => rawTextLines[j].toUpperCase().includes(k))) {
+                p.spouseName = val; break;
+              }
+            }
+          } else if (!collectAddr && (u.includes('ADDRESS') || u.includes('PATA'))) {
+            collectAddr = true;
+            continue;
+          }
+
+          if (collectAddr) {
+            if (u.includes('OLD PASSPORT') || u.includes('FILE NO') || u.match(/\b([A-Z]{2,4}\d{7,15})\b/) || u.match(/^\d{5,8}\s+\d{2}\/\d{2}\/\d{4}/)) {
+              collectAddr = false;
+            } else {
+              addrLines.push(rawTextLines[i]);
+            }
+          }
+        }
+      } else {
+        // Fallback: Label-less parsing (Pure sequence & regex heuristics)
+        // Order is usually: 1. Father 2. Mother 3. Spouse (Optional) 4-6. Address 7. Old Passport info 8. File No
+        const potentialNames = [];
+        for (const line of rawTextLines) {
+           // A name line usually has 2+ uppercase words and no numbers/commas
+           if (/^[A-Z\s.]{4,}$/i.test(line) && line.split(' ').length >= 2 && !/\d|,/.test(line)) {
+             potentialNames.push(cleanName(line));
+           } else {
+             // If it hits numbers or commas, it's likely address territory
+             if (/\d|,/.test(line)) {
+                if (!line.match(/\b([A-Z]{2,4}\d{7,15})\b/) && !line.match(/\d{2}\/\d{2}\/\d{4}/)) {
+                  addrLines.push(line);
+                }
+             }
+           }
+        }
+        
+        if (potentialNames.length >= 1) p.fatherName = potentialNames[0];
+        if (potentialNames.length >= 2) p.motherName = potentialNames[1];
+        if (potentialNames.length >= 3) p.spouseName = potentialNames[2];
+      }
+
+      // Address processing
+      if (addrLines.length > 0) {
+        // Clean out names that leaked into address
+        const knownNameTokens = [p.fatherName, p.motherName, p.spouseName].filter(Boolean).map(n => n.split(' ')[0].toUpperCase());
+        const cleanAddrLines = addrLines.filter(line => {
+          const up = line.toUpperCase();
+          const hasAddrContent = /\d/.test(line) || /[,]/.test(line) || /FLAT|PLOT|HOUSE|NAGAR|COLONY|ROAD|STREET|DIST/i.test(line);
+          const isNameLine = knownNameTokens.some(t => t.length > 3 && up.includes(t));
+          return hasAddrContent || !isNameLine;
+        });
+
+        p.address = cleanAddrLines.join('\n');
+
+        const STATES = ['ANDHRA PRADESH','TELANGANA','KARNATAKA','MAHARASHTRA','UTTAR PRADESH','RAJASTHAN','GUJARAT','DELHI','TAMIL NADU','KERALA','WEST BENGAL','MADHYA PRADESH','BIHAR','ODISHA','PUNJAB','HARYANA','JHARKHAND','ASSAM','CHHATTISGARH','UTTARAKHAND','GOA'];
+        for (const line of cleanAddrLines) {
+          if (!p.state) {
+            const st = STATES.find(s => line.toUpperCase().includes(s));
+            if (st) p.state = st.split(' ').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
+          }
+          if (!p.city) {
+            const pm = line.match(/(.+?),?\s*\b\d{6}\b/);
+            if (pm) {
+              const parts = pm[1].split(/[,]+/).map(s => s.trim()).filter(s => s.length > 2);
+              p.city = parts.pop()?.replace(/[^a-zA-Z\s]/g, '').trim();
+            } else {
+              // Try to find a line with just a city name
+              const parts = line.split(/[,]+/).map(s => s.trim());
+              for (const part of parts) {
+                if (/^(HYDERABAD|DELHI|MUMBAI|KOLKATA|CHENNAI|BANGALORE|LUCKNOW|PATNA|PUNE)$/i.test(part)) {
+                   p.city = part;
+                }
+              }
+            }
+          }
+          if (!p.pin) {
+            const pinMatch = line.match(/\b(\d{6})\b/);
+            if (pinMatch) p.pin = pinMatch[1];
           }
         }
       }
