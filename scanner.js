@@ -1945,14 +1945,23 @@ async function extractPassportData(imageData) {
        return `${yymmdd.substring(4,6)}/${yymmdd.substring(2,4)}/${y}`;
     };
 
+    const countryMap = {
+      'IND': 'INDIAN',
+      'USA': 'AMERICAN',
+      'GBR': 'BRITISH',
+      'CAN': 'CANADIAN',
+      'AUS': 'AUSTRALIAN'
+    };
+
     const parsedData = {
       surname: surname,
       givenNames: givenNames,
       passportNo: passportNo,
       countryCode: nat,
+      nationality: countryMap[nat] || nat,
       dob: formatMRZDate(dobRaw),
       expiryDate: formatMRZDate(expRaw),
-      gender: gender === 'M' ? 'Male (M)' : gender === 'F' ? 'Female (F)' : gender,
+      gender: gender,
       mrz1: mrz1,
       mrz2: mrz2
     };
