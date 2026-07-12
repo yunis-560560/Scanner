@@ -1868,7 +1868,7 @@ function triggerMockVerification() {
 
   // Sample passport cropped images (using relative paths for offline and local/server support)
   const mockFrontImage = 'sample_passport.png';
-  const mockBackImage  = 'sample_passport.png';
+  const mockBackImage  = 'sample_passport_back.png';
 
   state.capturedFront = mockFrontImage;
   state.capturedBack  = mockBackImage;
@@ -1887,28 +1887,28 @@ function triggerMockVerification() {
 
 function triggerMockOCR() {
   const fields = {
-    surname: 'KUMAR',
-    givenNames: 'ASHISH',
-    dob: '22/01/2004',
+    surname: 'SHAIK',
+    givenNames: 'MOHAMMAD YUNIS',
+    dob: '20/11/2001',
     gender: 'M',
     nationality: 'INDIAN',
-    placeOfBirth: 'AURAIYA, UTTAR PRADESH',
-    passportNo: 'Y6978513',
+    placeOfBirth: 'ATMAKUR, ANDHRA PRADESH',
+    passportNo: 'AE471374',
     countryCode: 'IND',
-    issueDate: '24/07/2023',
-    expiryDate: '23/07/2033',
-    placeOfIssue: 'LUCKNOW',
-    fatherName: 'DHARMENDRA KUMAR PRAJAPATI',
-    motherName: 'NEERAJ PRAJAPATI',
+    issueDate: '23/07/2025',
+    expiryDate: '22/07/2035',
+    placeOfIssue: 'VIJAYAWADA',
+    fatherName: 'FAREED BASHA SHAIK',
+    motherName: 'BEEBJAN SHAIK',
     spouseName: '',
-    fileNo: 'LK2068200715223',
-    address: 'ROOM NO.316, RADHAKRISHNAN BHAWAN, IIT ROORKEE, HARIDWAR, PIN:247667, UTTARAKHAND, INDIA',
-    city: 'Haridwar',
-    state: 'Uttarakhand',
-    pin: '247667',
+    fileNo: 'VJ6065266422725',
+    address: '2-202-1A, JR PETA, ATMAKUR, SRI POTTI SRIRAMULU NELLORE, PIN:524322, ANDHRA PRADESH, INDIA',
+    city: 'Atmakur',
+    state: 'Andhra Pradesh',
+    pin: '524322',
     country: 'India',
-    mrz1: 'P<INDKUMAR<<ASHISH<<<<<<<<<<<<<<<<<<<<<<<<<<',
-    mrz2: 'Y6978513<9IND0401227M3307238200682007152239'
+    mrz1: 'P<INDSHAIK<<MOHAMMAD<YUNIS<<<<<<<<<<<<<<<<<<',
+    mrz2: 'AE471374<2IND0111207M35072236065266422725<34'
   };
 
   for (const [idSuffix, value] of Object.entries(fields)) {
