@@ -1930,38 +1930,38 @@ async function extractPassportData(frontImage, backImage) {
 
         parsedData.dob = formatMRZDate(dobRaw);
         parsedData.expiryDate = formatMRZDate(expRaw);
-        parsedData.gender = gender === 'M' ? 'Male (M)' : gender === 'F' ? 'Female (F)' : gender;
+        parsedData.gender = gender === 'M' ? 'M' : gender === 'F' ? 'F' : gender;
         parsedData.mrz1 = mrz1;
         parsedData.mrz2 = mrz2;
         parsedData.nationality = parsedData.countryCode === 'IND' ? 'INDIAN' : parsedData.countryCode;
       }
 
       // Other Front Page Fields
-      const lines = frontText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const lines = frontText.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes('<'));
       for (let i = 0; i < lines.length; i++) {
         const upperLine = lines[i].toUpperCase();
         
-        // Place of Birth
-        if ((upperLine.includes('PLACE OF BIRTH') || upperLine.includes('BIRTH')) && !parsedData.placeOfBirth) {
-          if (upperLine.length > upperLine.indexOf('BIRTH') + 6) {
-             let val = lines[i].substring(upperLine.indexOf('BIRTH') + 6).trim();
-             if(val.startsWith(':') || val.startsWith('-')) val = val.substring(1).trim();
-             if(val && val.length > 2) parsedData.placeOfBirth = val;
-          }
+        // Place of Birth - often follows Date of Birth or is near Sex
+        if (upperLine.includes('PLACE OF BIRTH') || upperLine.includes('BIRTH')) {
           if (!parsedData.placeOfBirth && i + 1 < lines.length) {
-             parsedData.placeOfBirth = lines[i+1];
+             const val = lines[i+1].replace(/[^a-zA-Z\s,]/g, '').trim();
+             if (val.length > 3 && !val.includes('SEX')) parsedData.placeOfBirth = val;
           }
         }
-        // Place of Issue
+        
+        // Place of Issue - usually near Date of Issue
         if ((upperLine.includes('PLACE OF ISSUE') || upperLine.includes('ISSUE')) && !upperLine.includes('DATE') && !parsedData.placeOfIssue) {
-          if (i + 1 < lines.length) parsedData.placeOfIssue = lines[i+1];
-        }
-        // Date of Issue
-        if ((upperLine.includes('DATE OF ISSUE') || upperLine.includes('ISSUE')) && upperLine.includes('DATE') && !parsedData.issueDate) {
           if (i + 1 < lines.length) {
-            const match = lines[i+1].match(/\d{2}\/\d{2}\/\d{4}/);
-            if(match) parsedData.issueDate = match[0];
-            else parsedData.issueDate = lines[i+1];
+            const val = lines[i+1].replace(/[^a-zA-Z\s]/g, '').trim();
+            if (val.length > 3) parsedData.placeOfIssue = val;
+          }
+        }
+        
+        // Date of Issue
+        if (!parsedData.issueDate) {
+          const match = upperLine.match(/\d{2}\/\d{2}\/\d{4}/);
+          if (match && match[0] !== parsedData.dob && match[0] !== parsedData.expiryDate) {
+             parsedData.issueDate = match[0];
           }
         }
       }
@@ -1969,59 +1969,96 @@ async function extractPassportData(frontImage, backImage) {
 
     // --- BACK PAGE PARSING ---
     if (backText) {
-      const lines = backText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      let addressLines = [];
-      let collectingAddress = false;
-
-      for (let i = 0; i < lines.length; i++) {
-        const upperLine = lines[i].toUpperCase();
-
-        // Father's Name
-        if ((upperLine.includes('FATHER') || upperLine.includes('LEGAL GUARDIAN')) && !parsedData.fatherName) {
-           if (i + 1 < lines.length) parsedData.fatherName = lines[i+1];
-        }
-        // Mother's Name
-        else if (upperLine.includes('MOTHER') && !parsedData.motherName) {
-           if (i + 1 < lines.length) parsedData.motherName = lines[i+1];
-        }
-        // Spouse's Name
-        else if (upperLine.includes('SPOUSE') && !parsedData.spouseName) {
-           if (i + 1 < lines.length) parsedData.spouseName = lines[i+1];
-        }
-        // File No
-        else if (upperLine.includes('FILE NO') || upperLine.includes('FILE ALO') || upperLine.includes('FILE NUMBER')) {
-           if (i + 1 < lines.length) parsedData.fileNo = lines[i+1].replace(/[^a-zA-Z0-9]/g, '');
-        }
-        // Address
-        else if (upperLine.includes('ADDRESS')) {
-           collectingAddress = true;
-           continue; 
-        }
-
-        if (collectingAddress) {
-           if (upperLine.includes('OLD PASSPORT') || upperLine.includes('FILE NO') || upperLine.includes('PIN')) {
-             if (upperLine.includes('PIN')) {
-                const pinMatch = upperLine.match(/\d{6}/);
-                if (pinMatch) parsedData.pin = pinMatch[0];
-             }
-             collectingAddress = false;
-           } else {
-             const pinMatch = upperLine.match(/\d{6}/);
-             if (pinMatch) {
-               parsedData.pin = pinMatch[0];
-               collectingAddress = false; 
-             }
-             addressLines.push(lines[i]);
-           }
-        }
-      }
-
-      if (addressLines.length > 0) {
-         parsedData.address = addressLines.join(', ');
-         if (addressLines.length >= 2) {
-            parsedData.city = addressLines[addressLines.length - 2];
-            parsedData.state = addressLines[addressLines.length - 1].replace(/\d{6}/, '').trim();
+      const lines = backText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+      
+      // Fallback: If Tesseract missed the headers entirely (common due to small font),
+      // we can assume standard Indian passport back page layout:
+      // Line 1: Father
+      // Line 2: Mother
+      // Line 3: Spouse (optional)
+      // Line 4-6: Address
+      // Line 7: Old Passport
+      // Line 8: File No
+      
+      let headerFound = lines.some(l => l.toUpperCase().includes('FATHER') || l.toUpperCase().includes('ADDRESS'));
+      
+      if (!headerFound && lines.length >= 5) {
+         // Heuristic parsing
+         parsedData.fatherName = lines[0].replace(/[^a-zA-Z\s]/g, '').trim();
+         parsedData.motherName = lines[1].replace(/[^a-zA-Z\s]/g, '').trim();
+         
+         let addressStartIndex = 2;
+         if (!lines[2].match(/\d/) && !lines[2].toUpperCase().includes('PIN')) {
+            // Might be spouse
+            if (lines[2].split(' ').length <= 3) {
+               parsedData.spouseName = lines[2].replace(/[^a-zA-Z\s]/g, '').trim();
+               addressStartIndex = 3;
+            }
          }
+         
+         let addressLines = [];
+         for(let i = addressStartIndex; i < lines.length; i++) {
+            if (lines[i].match(/^[A-Z0-9]{10,}$/)) {
+               // File Number
+               parsedData.fileNo = lines[i].replace(/[^A-Z0-9]/g, '');
+               break; // File no is usually last
+            } else if (lines[i].match(/^[A-Z][0-9]{7}/)) {
+               // Old Passport No - ignore
+            } else {
+               addressLines.push(lines[i]);
+               const pinMatch = lines[i].match(/\b\d{6}\b/);
+               if (pinMatch) parsedData.pin = pinMatch[0];
+            }
+         }
+         
+         if (addressLines.length > 0) {
+           parsedData.address = addressLines.join(', ');
+         }
+      } else {
+        // Keyword based parsing
+        let addressLines = [];
+        let collectingAddress = false;
+
+        for (let i = 0; i < lines.length; i++) {
+          const upperLine = lines[i].toUpperCase();
+
+          if ((upperLine.includes('FATHER') || upperLine.includes('LEGAL GUARDIAN')) && !parsedData.fatherName) {
+             if (i + 1 < lines.length) parsedData.fatherName = lines[i+1].replace(/[^a-zA-Z\s]/g, '').trim();
+          }
+          else if (upperLine.includes('MOTHER') && !parsedData.motherName) {
+             if (i + 1 < lines.length) parsedData.motherName = lines[i+1].replace(/[^a-zA-Z\s]/g, '').trim();
+          }
+          else if (upperLine.includes('SPOUSE') && !parsedData.spouseName) {
+             if (i + 1 < lines.length) parsedData.spouseName = lines[i+1].replace(/[^a-zA-Z\s]/g, '').trim();
+          }
+          else if (upperLine.includes('FILE NO') || upperLine.match(/^[A-Z]{2}[0-9]{13}$/)) {
+             if (upperLine.includes('FILE NO') && i + 1 < lines.length) {
+               parsedData.fileNo = lines[i+1].replace(/[^a-zA-Z0-9]/g, '');
+             } else if (upperLine.match(/^[A-Z]{2}[0-9]{13}$/)) {
+               parsedData.fileNo = upperLine.replace(/[^a-zA-Z0-9]/g, '');
+             }
+          }
+          else if (upperLine.includes('ADDRESS')) {
+             collectingAddress = true;
+             continue; 
+          }
+
+          if (collectingAddress) {
+             if (upperLine.includes('OLD PASSPORT') || upperLine.includes('FILE NO')) {
+               collectingAddress = false;
+             } else {
+               const pinMatch = upperLine.match(/\b\d{6}\b/);
+               if (pinMatch) {
+                 parsedData.pin = pinMatch[0];
+               }
+               addressLines.push(lines[i]);
+             }
+          }
+        }
+
+        if (addressLines.length > 0) {
+           parsedData.address = addressLines.join(', ');
+        }
       }
     }
 
