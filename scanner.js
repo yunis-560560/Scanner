@@ -1745,6 +1745,8 @@ function confirmCropAdjustment() {
         state.phase = 'SUCCESS';
         stopCamera();
         dom.mobileView.style.display = 'none';
+        triggerMockOCR();
+        updateSuccessScreenState();
         showSuccessScreen();
       }
     };
