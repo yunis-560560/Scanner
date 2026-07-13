@@ -59,6 +59,38 @@ const state = {
   demoTimerId: null,         // timer ID for the 6-second onboarding guide
 };
 
+function resetApp() {
+  state.capturedFront = null;
+  state.capturedBack = null;
+  state.rawFront = null;
+  state.rawBack = null;
+  state.reCropping = null;
+  state.cropImageSrc = null;
+  
+  if (typeof resetOCRCache === 'function') resetOCRCache();
+  
+  const fieldsToClear = [
+    'fieldSurname', 'fieldGivenNames', 'fieldDob', 'fieldGender', 'fieldNationality', 'fieldPlaceOfBirth',
+    'fieldPassportNo', 'fieldCountryCode', 'fieldIssueDate', 'fieldExpiryDate', 'fieldPlaceOfIssue',
+    'fieldFatherName', 'fieldMotherName', 'fieldSpouseName', 'fieldFileNo', 'fieldAddress', 'fieldCity',
+    'fieldState', 'fieldPin', 'fieldCountry', 'fieldMrz1', 'fieldMrz2'
+  ];
+  fieldsToClear.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.style.backgroundColor = ''; el.style.borderColor = ''; }
+  });
+  
+  if (dom.thumbFrontImg) dom.thumbFrontImg.src = '';
+  if (dom.thumbBackImg) dom.thumbBackImg.src = '';
+  const backThumb = dom.thumbBackImg?.closest('.success-thumb');
+  if (backThumb) backThumb.style.display = 'none';
+  
+  const appThumbFront = document.getElementById('appThumbFront');
+  const appThumbBack = document.getElementById('appThumbBack');
+  if (appThumbFront) appThumbFront.src = '';
+  if (appThumbBack) appThumbBack.src = '';
+}
+
 /* ============================================================
    DOM REFS
    ============================================================ */
@@ -350,6 +382,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Wire desktop upload buttons
   if (dom.uploadPassportBtn && dom.passportFileInput) {
     dom.uploadPassportBtn.addEventListener('click', () => {
+      resetApp();
       state.phase = 'FRONT_SCAN';
       dom.passportFileInput.value = ''; // Reset file input to allow uploading same image
       dom.passportFileInput.click();
@@ -370,10 +403,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const mobUploadBtn = document.getElementById('mobUploadPassportBtn');
 
   if (mobScanBtn) {
-    mobScanBtn.addEventListener('click', openMobileScanner);
+    mobScanBtn.addEventListener('click', () => {
+      resetApp();
+      openMobileScanner();
+    });
   }
   if (mobUploadBtn && dom.passportFileInput) {
     mobUploadBtn.addEventListener('click', () => {
+      resetApp();
       state.phase = 'FRONT_SCAN';
       dom.passportFileInput.value = '';
       dom.passportFileInput.click();

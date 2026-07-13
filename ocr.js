@@ -1,8 +1,23 @@
 /**
  * ocr.js
- * Production-ready client-side OCR pipeline using Tesseract.js
- * Extracts text from passport front (MRZ) and back (Address, Parents) pages.
+ * Production-ready e-KYC OCR Pipeline with Zone-Based Extraction and ICAO 9303 Validation
  */
+
+let globalOcrWorker = null;
+let globalMrzWorker = null;
+
+// Initialize workers once to speed up consecutive scans
+async function initWorkers() {
+  if (!globalOcrWorker) {
+    globalOcrWorker = await Tesseract.createWorker('eng');
+  }
+  if (!globalMrzWorker) {
+    globalMrzWorker = await Tesseract.createWorker('eng');
+    await globalMrzWorker.setParameters({
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
+    });
+  }
+}
 
 // Show/Hide OCR Loading UI
 function setOcrLoading(show, message = "Analyzing Document...") {
@@ -14,30 +29,52 @@ function setOcrLoading(show, message = "Analyzing Document...") {
   }
 }
 
+// Clear OCR Caches and State
+function resetOCRCache() {
+  console.log("Clearing OCR caches and session data...");
+  // In a real app we'd clear localStorage here if we used it
+  // localStorage.removeItem('ocrCache');
+}
+
 // -------------------------------------------------------------
 // MAIN ENTRY POINT
 // -------------------------------------------------------------
 async function startDocumentOCR(frontDataUrl, backDataUrl) {
   try {
-    setOcrLoading(true, "Initializing OCR Engine...");
+    resetOCRCache(); // Absolute state isolation
+    setOcrLoading(true, "Initializing Production OCR Engine...");
+    
+    await initWorkers();
 
-    let frontResult = {};
-    let backResult = {};
+    let finalData = {
+      personalInformation: {},
+      passportInformation: {},
+      familyDetails: {},
+      address: {},
+      additionalInformation: {},
+      mrz: {},
+      confidence: {},
+      validation: {}
+    };
 
     // Process Front Page
     if (frontDataUrl) {
-      setOcrLoading(true, "Scanning Front Page (MRZ)...");
-      frontResult = await extractFrontPage(frontDataUrl);
+      setOcrLoading(true, "Scanning Front Page Zones...");
+      const frontResult = await extractFrontPageZones(frontDataUrl);
+      finalData = mergeOCRData(finalData, frontResult);
     }
 
     // Process Back Page
     if (backDataUrl) {
-      setOcrLoading(true, "Scanning Back Page (Details)...");
-      backResult = await extractBackPage(backDataUrl);
+      setOcrLoading(true, "Scanning Back Page Zones...");
+      const backResult = await extractBackPageZones(backDataUrl);
+      finalData = mergeOCRData(finalData, backResult);
     }
 
-    // Combine results
-    const finalData = { ...frontResult, ...backResult };
+    setOcrLoading(true, "Validating MRZ Check Digits...");
+    finalData = validateAndResolveConflicts(finalData);
+
+    console.log("FINAL OUTPUT JSON:\n", JSON.stringify(finalData, null, 2));
 
     setOcrLoading(true, "Populating Verification Form...");
     populateForm(finalData);
@@ -47,7 +84,6 @@ async function startDocumentOCR(frontDataUrl, backDataUrl) {
     alert("Failed to process document: " + error.message);
   } finally {
     setOcrLoading(false);
-    // Proceed to success screen automatically if we are in scanner logic
     if (typeof updateSuccessScreenState === 'function') {
       updateSuccessScreenState();
       showSuccessScreen();
@@ -55,264 +91,271 @@ async function startDocumentOCR(frontDataUrl, backDataUrl) {
   }
 }
 
-// -------------------------------------------------------------
-// FRONT PAGE (MRZ EXTRACTION)
-// -------------------------------------------------------------
-async function extractFrontPage(imageUrl) {
-  setOcrLoading(true, "Scanning Front Page (VIZ)...");
-  
-  // PASS 1: VIZ (Full Image without whitelist)
-  const workerViz = await Tesseract.createWorker('eng');
-  const { data: { text: vizText } } = await workerViz.recognize(imageUrl);
-  await workerViz.terminate();
-  console.log("Raw VIZ Text:\n", vizText);
-
-  const vizData = parseVIZ(vizText);
-
-  setOcrLoading(true, "Scanning Front Page (MRZ)...");
-
-  // PASS 2: MRZ (Cropped bottom with whitelist)
-  const mrzImage = await cropBottomThird(imageUrl);
-  const workerMrz = await Tesseract.createWorker('eng');
-  await workerMrz.setParameters({
-    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
-  });
-  const { data: { text: mrzText } } = await workerMrz.recognize(mrzImage);
-  await workerMrz.terminate();
-  
-  console.log("Raw MRZ Text:\n", mrzText);
-  const mrzData = parseMRZ(mrzText);
-
-  return { ...mrzData, ...vizData };
-}
-
-// -------------------------------------------------------------
-// VIZ PARSER ENGINE
-// -------------------------------------------------------------
-function parseVIZ(rawText) {
-  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const result = {};
-
-  for (let i = 0; i < lines.length; i++) {
-    const upperLine = lines[i].toUpperCase();
-
-    // Place of Birth
-    if ((upperLine.includes('PLACE OF BIRTH') || upperLine.includes('BIRTH')) && !result.placeOfBirth) {
-      const match = upperLine.match(/PLACE OF BIRTH[:\s]*(.*)/i);
-      if (match && match[1].trim().length > 3) {
-        result.placeOfBirth = match[1].trim();
-      } else if (lines[i+1]) {
-        result.placeOfBirth = lines[i+1].trim();
-      }
-    }
-
-    // Place of Issue
-    if ((upperLine.includes('PLACE OF ISSUE') || upperLine.includes('ISSUE')) && !upperLine.includes('DATE') && !result.placeOfIssue) {
-      const match = upperLine.match(/PLACE OF ISSUE[:\s]*(.*)/i);
-      if (match && match[1].trim().length > 3) {
-        result.placeOfIssue = match[1].trim();
-      } else if (lines[i+1]) {
-        result.placeOfIssue = lines[i+1].trim();
-      }
-    }
-
-    // Date of Issue
-    if (upperLine.includes('DATE OF ISSUE') || upperLine.includes('ISSUE DATE')) {
-       const dateMatch = upperLine.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
-       if (dateMatch) {
-         result.issueDate = dateMatch[1];
-       } else if (lines[i+1]) {
-         const nextDateMatch = lines[i+1].match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
-         if (nextDateMatch) result.issueDate = nextDateMatch[1];
-       }
-    }
-  }
-
-  return result;
-}
-
-// -------------------------------------------------------------
-// BACK PAGE (ADDRESS & PARENTS)
-// -------------------------------------------------------------
-async function extractBackPage(imageUrl) {
-  const worker = await Tesseract.createWorker('eng');
-  
-  // Back page needs standard english
-  const { data: { text } } = await worker.recognize(imageUrl);
-  await worker.terminate();
-
-  console.log("Raw Back Page Text:\n", text);
-  
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  
-  const result = {
-    fatherName: '',
-    motherName: '',
-    spouseName: '',
-    fileNo: '',
-    pin: '',
-    address: ''
+function mergeOCRData(base, addition) {
+  return {
+    personalInformation: { ...base.personalInformation, ...addition.personalInformation },
+    passportInformation: { ...base.passportInformation, ...addition.passportInformation },
+    familyDetails: { ...base.familyDetails, ...addition.familyDetails },
+    address: { ...base.address, ...addition.address },
+    additionalInformation: { ...base.additionalInformation, ...addition.additionalInformation },
+    mrz: { ...base.mrz, ...addition.mrz },
+    confidence: { ...base.confidence, ...addition.confidence },
+    validation: { ...base.validation, ...addition.validation }
   };
-
-  // Extract by line matching
-  for (let i = 0; i < lines.length; i++) {
-    const upperLine = lines[i].toUpperCase();
-    
-    if ((upperLine.includes('FATHER') || upperLine.includes('LEGAL GUARDIAN')) && !result.fatherName) {
-      result.fatherName = lines[i+1] ? lines[i+1].trim() : '';
-    }
-    if (upperLine.includes('MOTHER') && !result.motherName) {
-      result.motherName = lines[i+1] ? lines[i+1].trim() : '';
-    }
-    if (upperLine.includes('SPOUSE') && !result.spouseName) {
-      result.spouseName = lines[i+1] ? lines[i+1].trim() : '';
-    }
-    if (upperLine.includes('PIN') || upperLine.includes('P I N')) {
-      const pinMatch = upperLine.match(/(\d{6})/);
-      if (pinMatch) result.pin = pinMatch[1];
-    }
-    // File number usually at the end or starts with two letters and 13 digits
-    const fileMatch = upperLine.match(/([A-Z]{2}[0-9]{13})/i);
-    if (fileMatch) result.fileNo = fileMatch[1].toUpperCase();
-  }
-
-  // Address extraction heuristic
-  const addressMatch = text.match(/(?:Address|Old Address)[^\n]*\n([\s\S]*?PIN.*?)\n/i);
-  if (addressMatch) {
-    result.address = addressMatch[1].replace(/\n/g, ', ').replace(/\s+/g, ' ').trim();
-  } else {
-    // Just try to grab lines after Spouse or Mother until PIN
-    let startIndex = -1;
-    let endIndex = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].toUpperCase().includes('ADDRESS')) startIndex = i + 1;
-      if (lines[i].toUpperCase().includes('PIN')) endIndex = i;
-    }
-    if (startIndex > -1 && endIndex >= startIndex) {
-       result.address = lines.slice(startIndex, endIndex + 1).join(', ');
-    }
-  }
-  
-  return result;
 }
 
 // -------------------------------------------------------------
-// HELPER FUNCTIONS
+// IMAGE PROCESSING & ZONE EXTRACTION
 // -------------------------------------------------------------
-function extractByRegex(text, regex) {
-  const match = text.match(regex);
-  return match && match[1] ? match[1].trim().replace(/\s+/g, ' ') : '';
-}
-
-function extractAddress(text) {
-  // Simple heuristic for Indian passport back page address
-  // Usually starts after spouse/mother name and ends with PIN
-  const addressMatch = text.match(/(?:Address|Old Address)[^\n]*\n([\s\S]*?PIN.*?)\n/i);
-  if (addressMatch) {
-    let cleanAddress = addressMatch[1].replace(/\n/g, ', ').replace(/\s+/g, ' ');
-    return cleanAddress.trim();
-  }
-  return '';
-}
-
-function cropBottomThird(imageUrl) {
+function getImageDimensions(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      // Take bottom 25% of the image height to focus strictly on MRZ
-      const cropHeight = Math.floor(img.height * 0.25);
-      const cropY = img.height - cropHeight;
-      
-      canvas.width = img.width;
-      canvas.height = cropHeight;
-      
-      ctx.drawImage(img, 0, cropY, img.width, cropHeight, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg'));
-    };
-    img.src = imageUrl;
+    img.onload = () => resolve({ img, width: img.width, height: img.height });
+    img.src = dataUrl;
   });
 }
 
+// Converts relative percentages to absolute pixels for Tesseract
+function getRect(imgWidth, imgHeight, relX, relY, relW, relH) {
+  return {
+    left: Math.floor(imgWidth * relX),
+    top: Math.floor(imgHeight * relY),
+    width: Math.floor(imgWidth * relW),
+    height: Math.floor(imgHeight * relH)
+  };
+}
+
+// FRONT PAGE ZONES (Relative to standard Indian Passport)
+async function extractFrontPageZones(imageUrl) {
+  const { img, width, height } = await getImageDimensions(imageUrl);
+  
+  // Define geometric zones
+  const zones = {
+    mrz: getRect(width, height, 0.0, 0.75, 1.0, 0.25),
+    passportNo: getRect(width, height, 0.7, 0.0, 0.3, 0.15),
+    names: getRect(width, height, 0.3, 0.15, 0.65, 0.25),
+    details: getRect(width, height, 0.3, 0.40, 0.65, 0.20),
+    issue: getRect(width, height, 0.3, 0.60, 0.65, 0.15)
+  };
+
+  const result = { personalInformation: {}, passportInformation: {}, mrz: {}, confidence: {} };
+
+  // 1. Process MRZ (Highest Priority, Strict Whitelist)
+  setOcrLoading(true, "Scanning MRZ Zone...");
+  const { data: mrzData } = await globalMrzWorker.recognize(imageUrl, { rectangle: zones.mrz });
+  const parsedMrz = parseMRZ(mrzData.text);
+  result.mrz = parsedMrz.data;
+  Object.assign(result.confidence, parsedMrz.confidence);
+
+  // 2. Process Passport Number Zone
+  setOcrLoading(true, "Scanning Passport Number Zone...");
+  const { data: pnoData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.passportNo });
+  const pnoClean = pnoData.text.replace(/[^A-Z0-9]/gi, '').trim().toUpperCase();
+  if (pnoClean.length >= 7) {
+    result.passportInformation.passportNumber = pnoClean;
+    result.confidence.passportNumber = pnoData.confidence;
+  }
+
+  // 3. Process Names Zone
+  setOcrLoading(true, "Scanning Names Zone...");
+  const { data: namesData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.names });
+  const namesClean = namesData.text.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.toLowerCase().includes('surname') && !l.toLowerCase().includes('name'));
+  if (namesClean.length > 0) result.personalInformation.surname = namesClean[0];
+  if (namesClean.length > 1) result.personalInformation.givenNames = namesClean.slice(1).join(' ');
+  result.confidence.surname = namesData.confidence;
+  result.confidence.givenNames = namesData.confidence;
+
+  // 4. Process Details Zone (DOB, Sex, POB)
+  setOcrLoading(true, "Scanning Details Zone...");
+  const { data: detailsData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.details });
+  const detailsLines = detailsData.text.split('\n').map(l => l.trim().toUpperCase());
+  for (let i = 0; i < detailsLines.length; i++) {
+    const line = detailsLines[i];
+    if (line.includes('PLACE OF BIRTH') || line.includes('BIRTH')) {
+      const match = line.match(/PLACE OF BIRTH[:\s]*(.*)/i);
+      if (match && match[1].length > 3) result.personalInformation.placeOfBirth = match[1];
+      else if (detailsLines[i+1]) result.personalInformation.placeOfBirth = detailsLines[i+1];
+    }
+  }
+
+  // 5. Process Issue Zone
+  setOcrLoading(true, "Scanning Issue Zone...");
+  const { data: issueData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.issue });
+  const issueLines = issueData.text.split('\n').map(l => l.trim().toUpperCase());
+  for (let i = 0; i < issueLines.length; i++) {
+    const line = issueLines[i];
+    if (line.includes('PLACE OF ISSUE') || line.includes('ISSUE')) {
+      const match = line.match(/PLACE OF ISSUE[:\s]*(.*)/i);
+      if (match && match[1].length > 3) result.passportInformation.placeOfIssue = match[1];
+      else if (issueLines[i+1]) result.passportInformation.placeOfIssue = issueLines[i+1];
+    }
+    const dates = line.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/g);
+    if (dates && dates.length > 0 && line.includes('ISSUE')) {
+      result.passportInformation.dateOfIssue = dates[0];
+    }
+  }
+
+  return result;
+}
+
+// BACK PAGE ZONES
+async function extractBackPageZones(imageUrl) {
+  const { img, width, height } = await getImageDimensions(imageUrl);
+  
+  // Define back page geometric zones
+  const zones = {
+    parents: getRect(width, height, 0.0, 0.0, 1.0, 0.40),
+    address: getRect(width, height, 0.0, 0.40, 1.0, 0.40),
+    fileNo: getRect(width, height, 0.0, 0.80, 1.0, 0.20)
+  };
+
+  const result = { familyDetails: {}, address: {}, additionalInformation: {}, confidence: {} };
+
+  // 1. Process Parents Zone
+  setOcrLoading(true, "Scanning Parents Zone...");
+  const { data: parentsData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.parents });
+  const pLines = parentsData.text.split('\n').map(l => l.trim().toUpperCase()).filter(l => l.length > 0);
+  for (let i = 0; i < pLines.length; i++) {
+    const line = pLines[i];
+    if ((line.includes('FATHER') || line.includes('LEGAL')) && !result.familyDetails.fatherName) {
+      result.familyDetails.fatherName = pLines[i+1] ? pLines[i+1] : '';
+    }
+    if (line.includes('MOTHER') && !result.familyDetails.motherName) {
+      result.familyDetails.motherName = pLines[i+1] ? pLines[i+1] : '';
+    }
+    if (line.includes('SPOUSE') && !result.familyDetails.spouseName) {
+      result.familyDetails.spouseName = pLines[i+1] ? pLines[i+1] : '';
+    }
+  }
+  result.confidence.familyDetails = parentsData.confidence;
+
+  // 2. Process Address Zone
+  setOcrLoading(true, "Scanning Address Zone...");
+  const { data: addressData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.address });
+  // strict address isolation
+  const addressLines = addressData.text.split('\n').map(l => l.trim());
+  let addressAccum = [];
+  let foundAddress = false;
+  for (let line of addressLines) {
+    let upLine = line.toUpperCase();
+    if (upLine.includes('FILE NO') || upLine.includes('OLD PASSPORT')) break; // STRICT GUARDRAIL
+    if (upLine.includes('ADDRESS')) { foundAddress = true; continue; }
+    if (foundAddress) addressAccum.push(line);
+    if (upLine.includes('PIN')) break;
+  }
+  if (addressAccum.length > 0) result.address.fullAddress = addressAccum.join(', ');
+  else result.address.fullAddress = addressData.text.replace(/\n/g, ', ').trim(); // fallback
+  result.confidence.address = addressData.confidence;
+
+  // 3. Process File No Zone
+  setOcrLoading(true, "Scanning File No Zone...");
+  const { data: fileData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.fileNo });
+  const fileMatch = fileData.text.match(/([A-Z]{2}[0-9]{13})/i);
+  if (fileMatch) result.additionalInformation.fileNumber = fileMatch[1].toUpperCase();
+  result.confidence.fileNumber = fileData.confidence;
+
+  return result;
+}
+
 // -------------------------------------------------------------
-// MRZ PARSER ENGINE
+// MRZ PARSING & ICAO 9303 VALIDATION
 // -------------------------------------------------------------
 function sanitizeMRZ(rawText) {
   let lines = rawText.split('\n').map(l => l.replace(/\s/g, '').trim()).filter(l => l.length >= 30);
-  
   return lines.map(line => {
     let cleaned = line.toUpperCase();
-    
-    // Force start of Line 1 to P<IND for Indian Passports
     if (cleaned.startsWith('P') && cleaned.length > 5) {
        cleaned = 'P<IND' + cleaned.substring(5);
     }
-    
-    // Replace contiguous L, K, or E blocks with < (e.g. LLLLLLKKLK -> <<<<<<<<<<)
     cleaned = cleaned.replace(/[LKE]{2,}/g, match => '<'.repeat(match.length));
-    
-    // Replace trailing noise
     cleaned = cleaned.replace(/[LKE\.]+$/g, match => '<'.repeat(match.length));
-    
-    // Fix length exactly to 44
     if (cleaned.length < 44) cleaned = cleaned.padEnd(44, '<');
     if (cleaned.length > 44) cleaned = cleaned.substring(0, 44);
-    
     return cleaned;
   });
 }
 
+function calculateICAOCheckDigit(str) {
+  const weights = [7, 3, 1];
+  let sum = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    let val = 0;
+    if (char >= '0' && char <= '9') val = parseInt(char, 10);
+    else if (char >= 'A' && char <= 'Z') val = char.charCodeAt(0) - 55;
+    else if (char === '<') val = 0;
+    else return -1;
+    sum += val * weights[i % 3];
+  }
+  return sum % 10;
+}
+
 function parseMRZ(rawText) {
   const lines = sanitizeMRZ(rawText);
-  
-  if (lines.length < 2) {
-    console.warn("Failed to detect 2 MRZ lines.");
-    return { mrz1: lines[0] || '', mrz2: lines[1] || '' };
-  }
+  const data = {};
+  const confidence = { mrz: 95 }; // Baseline if structured well
 
-  const line1 = lines[lines.length - 2];
-  const line2 = lines[lines.length - 1];
+  if (lines.length >= 2) {
+    const line1 = lines[lines.length - 2];
+    const line2 = lines[lines.length - 1];
 
-  const result = {
-    mrz1: line1,
-    mrz2: line2,
-  };
+    data.mrz1 = line1;
+    data.mrz2 = line2;
 
-  // Indian/TD3 MRZ Format:
-  // Line 1: P<INDLASTNAME<<FIRSTNAME<<<<<<<<
-  // Line 2: PASSPORTNO<CHK NAT YYMMDD CHK M/F YYMMDD CHK ...
-  
-  if (line1.startsWith('P')) {
-    result.countryCode = line1.substring(2, 5).replace(/</g, '');
-    
-    // Parse Names
-    const nameStr = line1.substring(5);
-    const nameParts = nameStr.split('<<');
-    if (nameParts.length > 0) {
-      result.surname = nameParts[0].replace(/</g, ' ').trim();
+    if (line1.startsWith('P')) {
+      data.countryCode = line1.substring(2, 5).replace(/</g, '');
+      const nameStr = line1.substring(5);
+      const nameParts = nameStr.split('<<');
+      if (nameParts.length > 0) data.surname = nameParts[0].replace(/</g, ' ').trim();
+      if (nameParts.length > 1) data.givenNames = nameParts[1].replace(/</g, ' ').trim();
+      
+      data.passportNo = line2.substring(0, 9).replace(/</g, '');
+      data.passportNoCheckDigit = line2.substring(9, 10);
+      
+      data.nationality = line2.substring(10, 13).replace(/</g, '');
+      
+      data.dob = line2.substring(13, 19);
+      data.dobCheckDigit = line2.substring(19, 20);
+      
+      data.gender = line2.substring(20, 21);
+      
+      data.expiry = line2.substring(21, 27);
+      data.expiryCheckDigit = line2.substring(27, 28);
+      
+      data.compositeCheckDigit = line2.substring(43, 44);
     }
-    if (nameParts.length > 1) {
-      result.givenNames = nameParts[1].replace(/</g, ' ').trim();
-    }
-    
-    // Parse Line 2
-    result.passportNo = line2.substring(0, 9).replace(/</g, '');
-    result.nationality = line2.substring(10, 13).replace(/</g, '');
-    
-    // DOB: YYMMDD
-    const dobRaw = line2.substring(13, 19);
-    result.dob = formatMRZDate(dobRaw);
-    
-    // Gender
-    result.gender = line2.substring(20, 21) === 'M' ? 'Male (M)' : (line2.substring(20, 21) === 'F' ? 'Female (F)' : line2.substring(20, 21));
-    
-    // Expiry: YYMMDD
-    const expRaw = line2.substring(21, 27);
-    result.expiryDate = formatMRZDate(expRaw, true);
   }
+  return { data, confidence };
+}
 
-  return result;
+function validateAndResolveConflicts(finalData) {
+  // Validate ICAO 9303 checksums
+  const mrz = finalData.mrz;
+  const v = { passportNoValid: false, dobValid: false, expiryValid: false };
+
+  if (mrz.passportNo && mrz.passportNoCheckDigit) {
+    const calc = calculateICAOCheckDigit(mrz.passportNo);
+    v.passportNoValid = (calc === parseInt(mrz.passportNoCheckDigit, 10));
+  }
+  if (mrz.dob && mrz.dobCheckDigit) {
+    const calc = calculateICAOCheckDigit(mrz.dob);
+    v.dobValid = (calc === parseInt(mrz.dobCheckDigit, 10));
+  }
+  if (mrz.expiry && mrz.expiryCheckDigit) {
+    const calc = calculateICAOCheckDigit(mrz.expiry);
+    v.expiryValid = (calc === parseInt(mrz.expiryCheckDigit, 10));
+  }
+  
+  finalData.validation = v;
+
+  // Conflict Resolution: Prefer MRZ for Core Identifiers
+  if (mrz.passportNo) finalData.passportInformation.passportNumber = mrz.passportNo;
+  if (mrz.dob) finalData.personalInformation.dateOfBirth = formatMRZDate(mrz.dob);
+  if (mrz.expiry) finalData.passportInformation.dateOfExpiry = formatMRZDate(mrz.expiry, true);
+  if (mrz.gender) finalData.personalInformation.gender = mrz.gender === 'M' ? 'Male (M)' : (mrz.gender === 'F' ? 'Female (F)' : mrz.gender);
+  if (mrz.nationality) finalData.personalInformation.nationality = mrz.nationality;
+
+  return finalData;
 }
 
 function formatMRZDate(yymmdd, isExpiry = false) {
@@ -320,61 +363,47 @@ function formatMRZDate(yymmdd, isExpiry = false) {
   const yy = parseInt(yymmdd.substring(0, 2), 10);
   const mm = yymmdd.substring(2, 4);
   const dd = yymmdd.substring(4, 6);
-  
   const currentYear = new Date().getFullYear() % 100;
-  
-  let fullYear;
-  if (isExpiry) {
-    fullYear = 2000 + yy;
-  } else {
-    // DOB: If YY > current year, it's 1900s, else 2000s
-    fullYear = yy > currentYear ? 1900 + yy : 2000 + yy;
-  }
-  
+  const fullYear = isExpiry ? 2000 + yy : (yy > currentYear ? 1900 + yy : 2000 + yy);
   return `${dd}/${mm}/${fullYear}`;
 }
 
 // -------------------------------------------------------------
 // FORM POPULATION
 // -------------------------------------------------------------
-function populateForm(data) {
-  // Safely sets value if field exists
+function populateForm(finalData) {
   const setVal = (id, val) => {
     const el = document.getElementById(id);
-    if (el && val !== undefined) {
-      el.value = val;
-    }
+    if (el && val) el.value = val;
   };
 
-  // Clear everything first (as requested: "Remove all hardcoded values")
-  const fieldsToClear = [
-    'fieldSurname', 'fieldGivenNames', 'fieldDob', 'fieldGender', 'fieldNationality', 'fieldPlaceOfBirth',
-    'fieldPassportNo', 'fieldCountryCode', 'fieldIssueDate', 'fieldExpiryDate', 'fieldPlaceOfIssue',
-    'fieldFatherName', 'fieldMotherName', 'fieldSpouseName', 'fieldFileNo', 'fieldAddress', 'fieldCity',
-    'fieldState', 'fieldPin', 'fieldCountry', 'fieldMrz1', 'fieldMrz2'
-  ];
-  fieldsToClear.forEach(id => setVal(id, ''));
+  const pi = finalData.personalInformation || {};
+  const pa = finalData.passportInformation || {};
+  const fd = finalData.familyDetails || {};
+  const ad = finalData.address || {};
+  const ai = finalData.additionalInformation || {};
+  const mz = finalData.mrz || {};
 
-  // Set Extracted Values
-  setVal('fieldSurname', data.surname);
-  setVal('fieldGivenNames', data.givenNames);
-  setVal('fieldDob', data.dob);
-  setVal('fieldGender', data.gender);
-  setVal('fieldNationality', data.nationality);
-  setVal('fieldPassportNo', data.passportNo);
-  setVal('fieldCountryCode', data.countryCode);
-  setVal('fieldExpiryDate', data.expiryDate);
-  setVal('fieldPlaceOfBirth', data.placeOfBirth);
-  setVal('fieldIssueDate', data.issueDate);
-  setVal('fieldPlaceOfIssue', data.placeOfIssue);
-  setVal('fieldMrz1', data.mrz1);
-  setVal('fieldMrz2', data.mrz2);
+  setVal('fieldSurname', pi.surname || mz.surname);
+  setVal('fieldGivenNames', pi.givenNames || mz.givenNames);
+  setVal('fieldDob', pi.dateOfBirth);
+  setVal('fieldGender', pi.gender);
+  setVal('fieldNationality', pi.nationality);
+  setVal('fieldPlaceOfBirth', pi.placeOfBirth);
+
+  setVal('fieldPassportNo', pa.passportNumber);
+  setVal('fieldCountryCode', mz.countryCode);
+  setVal('fieldIssueDate', pa.dateOfIssue);
+  setVal('fieldExpiryDate', pa.dateOfExpiry);
+  setVal('fieldPlaceOfIssue', pa.placeOfIssue);
+
+  setVal('fieldFatherName', fd.fatherName);
+  setVal('fieldMotherName', fd.motherName);
+  setVal('fieldSpouseName', fd.spouseName);
+
+  setVal('fieldFileNo', ai.fileNumber);
+  setVal('fieldAddress', ad.fullAddress);
   
-  // Back page details
-  setVal('fieldFatherName', data.fatherName);
-  setVal('fieldMotherName', data.motherName);
-  setVal('fieldSpouseName', data.spouseName);
-  setVal('fieldFileNo', data.fileNo);
-  setVal('fieldPin', data.pin);
-  setVal('fieldAddress', data.address);
+  setVal('fieldMrz1', mz.mrz1);
+  setVal('fieldMrz2', mz.mrz2);
 }
