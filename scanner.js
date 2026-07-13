@@ -70,10 +70,14 @@ function resetApp() {
   if (typeof resetOCRCache === 'function') resetOCRCache();
   
   const fieldsToClear = [
-    'fieldSurname', 'fieldGivenNames', 'fieldDob', 'fieldGender', 'fieldNationality', 'fieldPlaceOfBirth',
-    'fieldPassportNo', 'fieldCountryCode', 'fieldIssueDate', 'fieldExpiryDate', 'fieldPlaceOfIssue',
-    'fieldFatherName', 'fieldMotherName', 'fieldSpouseName', 'fieldFileNo', 'fieldAddress', 'fieldCity',
-    'fieldState', 'fieldPin', 'fieldCountry', 'fieldMrz1', 'fieldMrz2'
+    'fieldPassportType', 'fieldCountryCode', 'fieldPassportNo',
+    'fieldSurname', 'fieldGivenNames', 'fieldGender', 'fieldDob', 'fieldPlaceOfBirth', 'fieldNationality',
+    'fieldIssueDate', 'fieldExpiryDate', 'fieldPlaceOfIssue', 'fieldIssuingAuthority',
+    'fieldFatherName', 'fieldMotherName', 'fieldSpouseName',
+    'fieldAddressLine1', 'fieldAddressLine2', 'fieldCity', 'fieldState', 'fieldPin', 'fieldCountry',
+    'fieldOldPassportNo', 'fieldOldPassportDate', 'fieldOldPassportPlace',
+    'fieldFileNo', 'fieldBarcode', 'fieldOcrConfidence', 'fieldMrzValidation',
+    'fieldMrz1', 'fieldMrz2'
   ];
   fieldsToClear.forEach(id => {
     const el = document.getElementById(id);

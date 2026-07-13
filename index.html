@@ -846,18 +846,24 @@
           </legend>
           <div class="app-form-grid">
             <div class="app-form-group">
+              <label class="app-label" for="fieldPassportType">Passport Type</label>
+              <input class="app-input" type="text" id="fieldPassportType" name="passportType" placeholder="e.g. P" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldCountryCode">Country Code</label>
+              <input class="app-input app-input--mono" type="text" id="fieldCountryCode" name="countryCode" placeholder="e.g. IND" maxlength="3" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldPassportNo">Passport Number</label>
+              <input class="app-input app-input--mono" type="text" id="fieldPassportNo" name="passportNo" placeholder="e.g. Y6978513" maxlength="9" />
+            </div>
+            <div class="app-form-group">
               <label class="app-label" for="fieldSurname">Surname / Last Name</label>
-              <input class="app-input" type="text" id="fieldSurname" name="surname" placeholder="e.g. KUMAR"
-                autocomplete="family-name" />
+              <input class="app-input" type="text" id="fieldSurname" name="surname" placeholder="e.g. KUMAR" />
             </div>
             <div class="app-form-group">
-              <label class="app-label" for="fieldGivenNames">Given Names</label>
-              <input class="app-input" type="text" id="fieldGivenNames" name="givenNames" placeholder="e.g. ASHISH"
-                autocomplete="given-name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldDob">Date of Birth</label>
-              <input class="app-input" type="text" id="fieldDob" name="dob" placeholder="DD/MM/YYYY" />
+              <label class="app-label" for="fieldGivenNames">Given Name(s)</label>
+              <input class="app-input" type="text" id="fieldGivenNames" name="givenNames" placeholder="e.g. ASHISH" />
             </div>
             <div class="app-form-group">
               <label class="app-label" for="fieldGender">Gender</label>
@@ -869,13 +875,16 @@
               </select>
             </div>
             <div class="app-form-group">
-              <label class="app-label" for="fieldNationality">Nationality</label>
-              <input class="app-input" type="text" id="fieldNationality" name="nationality" placeholder="e.g. INDIAN" />
+              <label class="app-label" for="fieldDob">Date of Birth</label>
+              <input class="app-input" type="text" id="fieldDob" name="dob" placeholder="DD/MM/YYYY" />
             </div>
             <div class="app-form-group">
               <label class="app-label" for="fieldPlaceOfBirth">Place of Birth</label>
-              <input class="app-input" type="text" id="fieldPlaceOfBirth" name="placeOfBirth"
-                placeholder="e.g. AURAIYA, UTTAR PRADESH" />
+              <input class="app-input" type="text" id="fieldPlaceOfBirth" name="placeOfBirth" placeholder="e.g. AURAIYA" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldNationality">Nationality</label>
+              <input class="app-input" type="text" id="fieldNationality" name="nationality" placeholder="e.g. IND" />
             </div>
           </div>
         </fieldset>
@@ -892,16 +901,6 @@
           </legend>
           <div class="app-form-grid">
             <div class="app-form-group">
-              <label class="app-label" for="fieldPassportNo">Passport Number</label>
-              <input class="app-input app-input--mono" type="text" id="fieldPassportNo" name="passportNo"
-                placeholder="e.g. Y6978513" maxlength="9" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldCountryCode">Country Code</label>
-              <input class="app-input app-input--mono" type="text" id="fieldCountryCode" name="countryCode"
-                placeholder="e.g. IND" maxlength="3" />
-            </div>
-            <div class="app-form-group">
               <label class="app-label" for="fieldIssueDate">Date of Issue</label>
               <input class="app-input" type="text" id="fieldIssueDate" name="issueDate" placeholder="DD/MM/YYYY" />
             </div>
@@ -909,15 +908,18 @@
               <label class="app-label" for="fieldExpiryDate">Date of Expiry</label>
               <input class="app-input" type="text" id="fieldExpiryDate" name="expiryDate" placeholder="DD/MM/YYYY" />
             </div>
-            <div class="app-form-group app-form-group--full">
+            <div class="app-form-group">
               <label class="app-label" for="fieldPlaceOfIssue">Place of Issue</label>
-              <input class="app-input" type="text" id="fieldPlaceOfIssue" name="placeOfIssue"
-                placeholder="e.g. LUCKNOW" />
+              <input class="app-input" type="text" id="fieldPlaceOfIssue" name="placeOfIssue" placeholder="e.g. LUCKNOW" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldIssuingAuthority">Issuing Authority <span class="app-label-opt">(optional)</span></label>
+              <input class="app-input" type="text" id="fieldIssuingAuthority" name="issuingAuthority" placeholder="e.g. RPO" />
             </div>
           </div>
         </fieldset>
 
-        <!-- ── Family Details (from back page) ── -->
+        <!-- ── Family Information ── -->
         <fieldset class="app-fieldset">
           <legend class="app-fieldset-legend">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -925,7 +927,7 @@
               <circle cx="9" cy="7" r="4" />
               <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            Family Details
+            Family Information
           </legend>
           <div class="app-form-grid">
             <div class="app-form-group">
@@ -936,33 +938,30 @@
               <label class="app-label" for="fieldMotherName">Mother's Name</label>
               <input class="app-input" type="text" id="fieldMotherName" name="motherName" placeholder="Full name" />
             </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldSpouseName">Spouse's Name <span
-                  class="app-label-opt">(optional)</span></label>
+            <div class="app-form-group app-form-group--full">
+              <label class="app-label" for="fieldSpouseName">Spouse Name <span class="app-label-opt">(optional)</span></label>
               <input class="app-input" type="text" id="fieldSpouseName" name="spouseName" placeholder="Full name" />
-            </div>
-            <div class="app-form-group">
-              <label class="app-label" for="fieldFileNo">File Number</label>
-              <input class="app-input app-input--mono" type="text" id="fieldFileNo" name="fileNo"
-                placeholder="e.g. LK2068200715223" />
             </div>
           </div>
         </fieldset>
 
-        <!-- ── Address ── -->
+        <!-- ── Permanent Address ── -->
         <fieldset class="app-fieldset">
           <legend class="app-fieldset-legend">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
-            Address
+            Permanent Address
           </legend>
           <div class="app-form-grid">
             <div class="app-form-group app-form-group--full">
-              <label class="app-label" for="fieldAddress">Permanent Address</label>
-              <textarea class="app-input app-textarea" id="fieldAddress" name="address" rows="3"
-                placeholder="Enter full address as shown on passport back page"></textarea>
+              <label class="app-label" for="fieldAddressLine1">Address Line 1</label>
+              <input class="app-input" type="text" id="fieldAddressLine1" name="addressLine1" placeholder="Flat, House, Building" />
+            </div>
+            <div class="app-form-group app-form-group--full">
+              <label class="app-label" for="fieldAddressLine2">Address Line 2</label>
+              <input class="app-input" type="text" id="fieldAddressLine2" name="addressLine2" placeholder="Street, Sector, Area" />
             </div>
             <div class="app-form-group">
               <label class="app-label" for="fieldCity">City / District</label>
@@ -974,13 +973,69 @@
             </div>
             <div class="app-form-group">
               <label class="app-label" for="fieldPin">PIN Code</label>
-              <input class="app-input app-input--mono" type="text" id="fieldPin" name="pin" placeholder="e.g. 247667"
-                maxlength="10" />
+              <input class="app-input app-input--mono" type="text" id="fieldPin" name="pin" placeholder="e.g. 247667" maxlength="10" />
             </div>
             <div class="app-form-group">
               <label class="app-label" for="fieldCountry">Country</label>
-              <input class="app-input" type="text" id="fieldCountry" name="country" placeholder="e.g. India"
-                value="India" />
+              <input class="app-input" type="text" id="fieldCountry" name="country" placeholder="e.g. India" value="India" />
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ── Previous Passport Details ── -->
+        <fieldset class="app-fieldset">
+          <legend class="app-fieldset-legend">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            Previous Passport Details <span style="font-size:12px;font-weight:400;color:#64748b">(If Available)</span>
+          </legend>
+          <div class="app-form-grid">
+            <div class="app-form-group">
+              <label class="app-label" for="fieldOldPassportNo">Old Passport Number</label>
+              <input class="app-input app-input--mono" type="text" id="fieldOldPassportNo" name="oldPassportNo" placeholder="" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldOldPassportDate">Old Passport Issue Date</label>
+              <input class="app-input" type="text" id="fieldOldPassportDate" name="oldPassportDate" placeholder="DD/MM/YYYY" />
+            </div>
+            <div class="app-form-group app-form-group--full">
+              <label class="app-label" for="fieldOldPassportPlace">Old Passport Place of Issue</label>
+              <input class="app-input" type="text" id="fieldOldPassportPlace" name="oldPassportPlace" placeholder="" />
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ── Additional Information ── -->
+        <fieldset class="app-fieldset">
+          <legend class="app-fieldset-legend">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            Additional Information
+          </legend>
+          <div class="app-form-grid">
+            <div class="app-form-group">
+              <label class="app-label" for="fieldFileNo">File Number</label>
+              <input class="app-input app-input--mono" type="text" id="fieldFileNo" name="fileNo" placeholder="e.g. LK2068200715223" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldBarcode">Barcode Number</label>
+              <input class="app-input app-input--mono" type="text" id="fieldBarcode" name="barcode" placeholder="" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldOcrConfidence">OCR Confidence</label>
+              <input class="app-input" type="text" id="fieldOcrConfidence" name="ocrConfidence" placeholder="e.g. 96%" readonly style="background:#f1f5f9; color:#475569" />
+            </div>
+            <div class="app-form-group">
+              <label class="app-label" for="fieldMrzValidation">MRZ Validation</label>
+              <input class="app-input" type="text" id="fieldMrzValidation" name="mrzValidation" placeholder="e.g. ✅ Pass" readonly style="background:#f1f5f9; color:#475569" />
             </div>
           </div>
         </fieldset>
@@ -1048,8 +1103,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="ocr.js?v=5"></script>
-  <script src="scanner.js?v=5"></script>
+  <script src="ocr.js?v=6"></script>
+  <script src="scanner.js?v=6"></script>
 </body>
 
 </html>

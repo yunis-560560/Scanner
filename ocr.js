@@ -243,8 +243,15 @@ async function extractBackPageZones(imageUrl) {
     if (foundAddress) addressAccum.push(line);
     if (upLine.includes('PIN')) break;
   }
-  if (addressAccum.length > 0) result.address.fullAddress = addressAccum.join(', ');
-  else result.address.fullAddress = addressData.text.replace(/\n/g, ', ').trim(); // fallback
+  
+  if (addressAccum.length > 0) {
+    result.address.addressLine1 = addressAccum[0] || '';
+    result.address.addressLine2 = addressAccum.slice(1).join(', ') || '';
+  } else {
+    const raw = addressData.text.split('\n').map(l => l.trim()).filter(l => l);
+    result.address.addressLine1 = raw[0] || '';
+    result.address.addressLine2 = raw.slice(1).join(', ') || '';
+  }
   result.confidence.address = addressData.confidence;
 
   // 3. Process File No Zone
@@ -252,6 +259,10 @@ async function extractBackPageZones(imageUrl) {
   const { data: fileData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.fileNo });
   const fileMatch = fileData.text.match(/([A-Z]{2}[0-9]{13})/i);
   if (fileMatch) result.additionalInformation.fileNumber = fileMatch[1].toUpperCase();
+  
+  const oldPassMatch = fileData.text.match(/OLD PASSPORT NO\.?\s*([A-Z0-9]+)/i);
+  if (oldPassMatch) result.additionalInformation.oldPassportNo = oldPassMatch[1];
+  
   result.confidence.fileNumber = fileData.confidence;
 
   return result;
@@ -303,6 +314,7 @@ function parseMRZ(rawText) {
     data.mrz2 = line2;
 
     if (line1.startsWith('P')) {
+      data.passportType = line1.substring(0, 1);
       data.countryCode = line1.substring(2, 5).replace(/</g, '');
       const nameStr = line1.substring(5);
       const nameParts = nameStr.split('<<');
@@ -355,6 +367,17 @@ function validateAndResolveConflicts(finalData) {
   if (mrz.gender) finalData.personalInformation.gender = mrz.gender === 'M' ? 'Male (M)' : (mrz.gender === 'F' ? 'Female (F)' : mrz.gender);
   if (mrz.nationality) finalData.personalInformation.nationality = mrz.nationality;
 
+  const mrzValid = v.passportNoValid && v.dobValid && v.expiryValid;
+  finalData.validation.mrzValidationString = mrzValid ? '✅ Pass' : '❌ Fail';
+  
+  const confs = Object.values(finalData.confidence).filter(c => typeof c === 'number');
+  if (confs.length > 0) {
+    const avg = confs.reduce((a, b) => a + b, 0) / confs.length;
+    finalData.confidence.overall = Math.round(avg) + '%';
+  } else {
+    finalData.confidence.overall = 'N/A';
+  }
+
   return finalData;
 }
 
@@ -384,26 +407,41 @@ function populateForm(finalData) {
   const ai = finalData.additionalInformation || {};
   const mz = finalData.mrz || {};
 
+  setVal('fieldPassportType', mz.passportType || pi.passportType);
+  setVal('fieldCountryCode', mz.countryCode);
+  setVal('fieldPassportNo', pa.passportNumber);
   setVal('fieldSurname', pi.surname || mz.surname);
   setVal('fieldGivenNames', pi.givenNames || mz.givenNames);
-  setVal('fieldDob', pi.dateOfBirth);
   setVal('fieldGender', pi.gender);
-  setVal('fieldNationality', pi.nationality);
+  setVal('fieldDob', pi.dateOfBirth);
   setVal('fieldPlaceOfBirth', pi.placeOfBirth);
+  setVal('fieldNationality', pi.nationality);
 
-  setVal('fieldPassportNo', pa.passportNumber);
-  setVal('fieldCountryCode', mz.countryCode);
   setVal('fieldIssueDate', pa.dateOfIssue);
   setVal('fieldExpiryDate', pa.dateOfExpiry);
   setVal('fieldPlaceOfIssue', pa.placeOfIssue);
+  setVal('fieldIssuingAuthority', pa.issuingAuthority);
 
   setVal('fieldFatherName', fd.fatherName);
   setVal('fieldMotherName', fd.motherName);
   setVal('fieldSpouseName', fd.spouseName);
 
+  setVal('fieldAddressLine1', ad.addressLine1);
+  setVal('fieldAddressLine2', ad.addressLine2);
+  setVal('fieldCity', ad.city);
+  setVal('fieldState', ad.state);
+  setVal('fieldPin', ad.pin);
+  setVal('fieldCountry', ad.country || 'India');
+
+  setVal('fieldOldPassportNo', ai.oldPassportNo);
+  setVal('fieldOldPassportDate', ai.oldPassportDate);
+  setVal('fieldOldPassportPlace', ai.oldPassportPlace);
+
   setVal('fieldFileNo', ai.fileNumber);
-  setVal('fieldAddress', ad.fullAddress);
-  
+  setVal('fieldBarcode', ai.barcode);
+  setVal('fieldOcrConfidence', finalData.confidence?.overall);
+  setVal('fieldMrzValidation', finalData.validation?.mrzValidationString);
+
   setVal('fieldMrz1', mz.mrz1);
   setVal('fieldMrz2', mz.mrz2);
 }
