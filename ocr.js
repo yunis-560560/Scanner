@@ -59,20 +59,76 @@ async function startDocumentOCR(frontDataUrl, backDataUrl) {
 // FRONT PAGE (MRZ EXTRACTION)
 // -------------------------------------------------------------
 async function extractFrontPage(imageUrl) {
-  // We crop the bottom 33% of the image to speed up Tesseract and improve MRZ accuracy
-  const mrzImage = await cropBottomThird(imageUrl);
+  setOcrLoading(true, "Scanning Front Page (VIZ)...");
   
-  const worker = await Tesseract.createWorker('eng');
-  // Optimize for MRZ characters
-  await worker.setParameters({
+  // PASS 1: VIZ (Full Image without whitelist)
+  const workerViz = await Tesseract.createWorker('eng');
+  const { data: { text: vizText } } = await workerViz.recognize(imageUrl);
+  await workerViz.terminate();
+  console.log("Raw VIZ Text:\n", vizText);
+
+  const vizData = parseVIZ(vizText);
+
+  setOcrLoading(true, "Scanning Front Page (MRZ)...");
+
+  // PASS 2: MRZ (Cropped bottom with whitelist)
+  const mrzImage = await cropBottomThird(imageUrl);
+  const workerMrz = await Tesseract.createWorker('eng');
+  await workerMrz.setParameters({
     tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
   });
+  const { data: { text: mrzText } } = await workerMrz.recognize(mrzImage);
+  await workerMrz.terminate();
+  
+  console.log("Raw MRZ Text:\n", mrzText);
+  const mrzData = parseMRZ(mrzText);
 
-  const { data: { text } } = await worker.recognize(mrzImage);
-  await worker.terminate();
+  return { ...mrzData, ...vizData };
+}
 
-  console.log("Raw MRZ Text:\n", text);
-  return parseMRZ(text);
+// -------------------------------------------------------------
+// VIZ PARSER ENGINE
+// -------------------------------------------------------------
+function parseVIZ(rawText) {
+  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const result = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const upperLine = lines[i].toUpperCase();
+
+    // Place of Birth
+    if ((upperLine.includes('PLACE OF BIRTH') || upperLine.includes('BIRTH')) && !result.placeOfBirth) {
+      const match = upperLine.match(/PLACE OF BIRTH[:\s]*(.*)/i);
+      if (match && match[1].trim().length > 3) {
+        result.placeOfBirth = match[1].trim();
+      } else if (lines[i+1]) {
+        result.placeOfBirth = lines[i+1].trim();
+      }
+    }
+
+    // Place of Issue
+    if ((upperLine.includes('PLACE OF ISSUE') || upperLine.includes('ISSUE')) && !upperLine.includes('DATE') && !result.placeOfIssue) {
+      const match = upperLine.match(/PLACE OF ISSUE[:\s]*(.*)/i);
+      if (match && match[1].trim().length > 3) {
+        result.placeOfIssue = match[1].trim();
+      } else if (lines[i+1]) {
+        result.placeOfIssue = lines[i+1].trim();
+      }
+    }
+
+    // Date of Issue
+    if (upperLine.includes('DATE OF ISSUE') || upperLine.includes('ISSUE DATE')) {
+       const dateMatch = upperLine.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
+       if (dateMatch) {
+         result.issueDate = dateMatch[1];
+       } else if (lines[i+1]) {
+         const nextDateMatch = lines[i+1].match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
+         if (nextDateMatch) result.issueDate = nextDateMatch[1];
+       }
+    }
+  }
+
+  return result;
 }
 
 // -------------------------------------------------------------
@@ -308,6 +364,9 @@ function populateForm(data) {
   setVal('fieldPassportNo', data.passportNo);
   setVal('fieldCountryCode', data.countryCode);
   setVal('fieldExpiryDate', data.expiryDate);
+  setVal('fieldPlaceOfBirth', data.placeOfBirth);
+  setVal('fieldIssueDate', data.issueDate);
+  setVal('fieldPlaceOfIssue', data.placeOfIssue);
   setVal('fieldMrz1', data.mrz1);
   setVal('fieldMrz2', data.mrz2);
   
