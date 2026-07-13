@@ -1727,15 +1727,11 @@ function confirmCropAdjustment() {
       if (state.reCropping === 'FRONT') {
         state.capturedFront = flattenedDataURL;
         state.reCropping = null;
-        triggerMockOCR();
-        updateSuccessScreenState();
-        showSuccessScreen();
+        startDocumentOCR(state.capturedFront, state.capturedBack);
       } else if (state.reCropping === 'BACK') {
         state.capturedBack = flattenedDataURL;
         state.reCropping = null;
-        triggerMockOCR();
-        updateSuccessScreenState();
-        showSuccessScreen();
+        startDocumentOCR(state.capturedFront, state.capturedBack);
       } else if (state.phase === 'FRONT_SCAN') {
         state.capturedFront = flattenedDataURL;
         state.phase = 'TRANSITION';
@@ -1745,9 +1741,7 @@ function confirmCropAdjustment() {
         state.phase = 'SUCCESS';
         stopCamera();
         dom.mobileView.style.display = 'none';
-        triggerMockOCR();
-        updateSuccessScreenState();
-        showSuccessScreen();
+        startDocumentOCR(state.capturedFront, state.capturedBack);
       }
     };
   }, 50);
@@ -1880,47 +1874,7 @@ function triggerMockVerification() {
   state.rawFrontSize = { w: 1000, h: 636 };
   state.rawBackSize = { w: 1000, h: 636 };
 
-  triggerMockOCR();
-  updateSuccessScreenState();
-  showSuccessScreen();
-}
-
-function triggerMockOCR() {
-  const fields = {
-    surname: 'SHAIK',
-    givenNames: 'MOHAMMAD YUNIS',
-    dob: '20/11/2001',
-    gender: 'M',
-    nationality: 'INDIAN',
-    placeOfBirth: 'ATMAKUR, ANDHRA PRADESH',
-    passportNo: 'AE471374',
-    countryCode: 'IND',
-    issueDate: '23/07/2025',
-    expiryDate: '22/07/2035',
-    placeOfIssue: 'VIJAYAWADA',
-    fatherName: 'FAREED BASHA SHAIK',
-    motherName: 'BEEBJAN SHAIK',
-    spouseName: '',
-    fileNo: 'VJ6065266422725',
-    address: '2-202-1A, JR PETA, ATMAKUR, SRI POTTI SRIRAMULU NELLORE, PIN:524322, ANDHRA PRADESH, INDIA',
-    city: 'Atmakur',
-    state: 'Andhra Pradesh',
-    pin: '524322',
-    country: 'India',
-    mrz1: 'P<INDSHAIK<<MOHAMMAD<YUNIS<<<<<<<<<<<<<<<<<<',
-    mrz2: 'AE471374<2IND0111207M35072236065266422725<34'
-  };
-
-  for (const [idSuffix, value] of Object.entries(fields)) {
-    const elId = 'field' + idSuffix.charAt(0).toUpperCase() + idSuffix.slice(1);
-    const inputEl = document.getElementById(elId);
-    if (inputEl) {
-      inputEl.value = value;
-    }
-  }
-
-  const decCheck = document.getElementById('appDeclaration');
-  if (decCheck) decCheck.checked = true;
+  startDocumentOCR(state.capturedFront, state.capturedBack);
 }
 
 function updateSuccessScreenState() {
