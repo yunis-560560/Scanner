@@ -87,15 +87,55 @@ async function extractBackPage(imageUrl) {
 
   console.log("Raw Back Page Text:\n", text);
   
-  // Basic Regex/Keyword mapping for the back page
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
   const result = {
-    fatherName: extractByRegex(text, /(?:Father|Legal Guardian).*?\n([A-Z\s]+)/i) || extractByRegex(text, /Father.*Name[^\n]*\n([A-Z\s]+)/i),
-    motherName: extractByRegex(text, /(?:Mother).*?\n([A-Z\s]+)/i) || extractByRegex(text, /Mother.*Name[^\n]*\n([A-Z\s]+)/i),
-    spouseName: extractByRegex(text, /(?:Spouse).*?\n([A-Z\s]+)/i),
-    fileNo: extractByRegex(text, /([A-Z0-9]{15})/i) || extractByRegex(text, /([A-Z]{2}[0-9]{13})/i),
-    pin: extractByRegex(text, /PIN[:\s]*(\d{6})/i),
-    address: extractAddress(text)
+    fatherName: '',
+    motherName: '',
+    spouseName: '',
+    fileNo: '',
+    pin: '',
+    address: ''
   };
+
+  // Extract by line matching
+  for (let i = 0; i < lines.length; i++) {
+    const upperLine = lines[i].toUpperCase();
+    
+    if ((upperLine.includes('FATHER') || upperLine.includes('LEGAL GUARDIAN')) && !result.fatherName) {
+      result.fatherName = lines[i+1] ? lines[i+1].trim() : '';
+    }
+    if (upperLine.includes('MOTHER') && !result.motherName) {
+      result.motherName = lines[i+1] ? lines[i+1].trim() : '';
+    }
+    if (upperLine.includes('SPOUSE') && !result.spouseName) {
+      result.spouseName = lines[i+1] ? lines[i+1].trim() : '';
+    }
+    if (upperLine.includes('PIN') || upperLine.includes('P I N')) {
+      const pinMatch = upperLine.match(/(\d{6})/);
+      if (pinMatch) result.pin = pinMatch[1];
+    }
+    // File number usually at the end or starts with two letters and 13 digits
+    const fileMatch = upperLine.match(/([A-Z]{2}[0-9]{13})/i);
+    if (fileMatch) result.fileNo = fileMatch[1].toUpperCase();
+  }
+
+  // Address extraction heuristic
+  const addressMatch = text.match(/(?:Address|Old Address)[^\n]*\n([\s\S]*?PIN.*?)\n/i);
+  if (addressMatch) {
+    result.address = addressMatch[1].replace(/\n/g, ', ').replace(/\s+/g, ' ').trim();
+  } else {
+    // Just try to grab lines after Spouse or Mother until PIN
+    let startIndex = -1;
+    let endIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toUpperCase().includes('ADDRESS')) startIndex = i + 1;
+      if (lines[i].toUpperCase().includes('PIN')) endIndex = i;
+    }
+    if (startIndex > -1 && endIndex >= startIndex) {
+       result.address = lines.slice(startIndex, endIndex + 1).join(', ');
+    }
+  }
   
   return result;
 }
@@ -125,8 +165,8 @@ function cropBottomThird(imageUrl) {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      // Take bottom 35% of the image height
-      const cropHeight = Math.floor(img.height * 0.35);
+      // Take bottom 25% of the image height to focus strictly on MRZ
+      const cropHeight = Math.floor(img.height * 0.25);
       const cropY = img.height - cropHeight;
       
       canvas.width = img.width;
@@ -142,16 +182,41 @@ function cropBottomThird(imageUrl) {
 // -------------------------------------------------------------
 // MRZ PARSER ENGINE
 // -------------------------------------------------------------
+function sanitizeMRZ(rawText) {
+  let lines = rawText.split('\n').map(l => l.replace(/\s/g, '').trim()).filter(l => l.length >= 30);
+  
+  return lines.map(line => {
+    let cleaned = line.toUpperCase();
+    
+    // Force start of Line 1 to P<IND for Indian Passports
+    if (cleaned.startsWith('P') && cleaned.length > 5) {
+       cleaned = 'P<IND' + cleaned.substring(5);
+    }
+    
+    // Replace contiguous L, K, or E blocks with < (e.g. LLLLLLKKLK -> <<<<<<<<<<)
+    cleaned = cleaned.replace(/[LKE]{2,}/g, match => '<'.repeat(match.length));
+    
+    // Replace trailing noise
+    cleaned = cleaned.replace(/[LKE\.]+$/g, match => '<'.repeat(match.length));
+    
+    // Fix length exactly to 44
+    if (cleaned.length < 44) cleaned = cleaned.padEnd(44, '<');
+    if (cleaned.length > 44) cleaned = cleaned.substring(0, 44);
+    
+    return cleaned;
+  });
+}
+
 function parseMRZ(rawText) {
-  const lines = rawText.split('\n').map(l => l.replace(/\s/g, '').trim()).filter(l => l.length >= 44);
+  const lines = sanitizeMRZ(rawText);
   
   if (lines.length < 2) {
     console.warn("Failed to detect 2 MRZ lines.");
     return { mrz1: lines[0] || '', mrz2: lines[1] || '' };
   }
 
-  const line1 = lines[lines.length - 2].toUpperCase();
-  const line2 = lines[lines.length - 1].toUpperCase();
+  const line1 = lines[lines.length - 2];
+  const line2 = lines[lines.length - 1];
 
   const result = {
     mrz1: line1,
