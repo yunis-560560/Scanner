@@ -34,11 +34,26 @@ function resetOCRCache() {
   console.log("Clearing OCR caches and session data...");
   sessionStorage.clear();
   localStorage.clear();
-  if (typeof resetApp === 'function' && !window.isResettingApp) {
-    window.isResettingApp = true;
-    resetApp();
-    window.isResettingApp = false;
-  }
+  const fieldsToClear = [
+    'fieldPassportType', 'fieldCountryCode', 'fieldPassportNo',
+    'fieldSurname', 'fieldGivenNames', 'fieldGender', 'fieldDob', 'fieldPlaceOfBirth', 'fieldNationality',
+    'fieldIssueDate', 'fieldExpiryDate', 'fieldPlaceOfIssue', 'fieldIssuingAuthority',
+    'fieldFatherName', 'fieldMotherName', 'fieldSpouseName',
+    'fieldAddressLine1', 'fieldAddressLine2', 'fieldCity', 'fieldState', 'fieldPin', 'fieldCountry',
+    'fieldOldPassportNo', 'fieldOldPassportDate', 'fieldOldPassportPlace',
+    'fieldFileNo', 'fieldBarcode', 'fieldOcrConfidence', 'fieldMrzValidation',
+    'fieldMrz1', 'fieldMrz2'
+  ];
+  fieldsToClear.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { 
+      el.value = ''; 
+      el.style.backgroundColor = ''; 
+      el.style.borderColor = ''; 
+      el.placeholder = '';
+      el.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
+    }
+  });
 }
 
 // -------------------------------------------------------------
