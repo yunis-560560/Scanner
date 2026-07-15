@@ -2961,3 +2961,21 @@ body.is-mobile .dsk-waiting {
     font-size: 1.25rem;
   }
 }
+
+/* ================================================================
+   OCR CONFIDENCE & QUALITY STYLES
+   ================================================================ */
+.confidence-high {
+  background-color: rgba(0, 200, 83, 0.08) !important;
+  border-color: rgba(0, 200, 83, 0.4) !important;
+}
+
+.confidence-medium {
+  background-color: rgba(255, 171, 0, 0.08) !important;
+  border-color: rgba(255, 171, 0, 0.4) !important;
+}
+
+.confidence-low {
+  background-color: rgba(255, 82, 82, 0.08) !important;
+  border-color: rgba(255, 82, 82, 0.4) !important;
+}

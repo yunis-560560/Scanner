@@ -32,8 +32,13 @@ function setOcrLoading(show, message = "Analyzing Document...") {
 // Clear OCR Caches and State
 function resetOCRCache() {
   console.log("Clearing OCR caches and session data...");
-  // In a real app we'd clear localStorage here if we used it
-  // localStorage.removeItem('ocrCache');
+  sessionStorage.clear();
+  localStorage.clear();
+  if (typeof resetApp === 'function' && !window.isResettingApp) {
+    window.isResettingApp = true;
+    resetApp();
+    window.isResettingApp = false;
+  }
 }
 
 // -------------------------------------------------------------
@@ -59,15 +64,25 @@ async function startDocumentOCR(frontDataUrl, backDataUrl) {
 
     // Process Front Page
     if (frontDataUrl) {
+      setOcrLoading(true, "Validating Front Page Quality...");
+      await validateImageQuality(frontDataUrl);
+      setOcrLoading(true, "Enhancing Front Page Image...");
+      const enhancedFront = await preprocessImage(frontDataUrl);
+
       setOcrLoading(true, "Scanning Front Page Zones...");
-      const frontResult = await extractFrontPageZones(frontDataUrl);
+      const frontResult = await extractFrontPageZones(enhancedFront);
       finalData = mergeOCRData(finalData, frontResult);
     }
 
     // Process Back Page
     if (backDataUrl) {
+      setOcrLoading(true, "Validating Back Page Quality...");
+      await validateImageQuality(backDataUrl);
+      setOcrLoading(true, "Enhancing Back Page Image...");
+      const enhancedBack = await preprocessImage(backDataUrl);
+
       setOcrLoading(true, "Scanning Back Page Zones...");
-      const backResult = await extractBackPageZones(backDataUrl);
+      const backResult = await extractBackPageZones(enhancedBack);
       finalData = mergeOCRData(finalData, backResult);
     }
 
@@ -81,7 +96,7 @@ async function startDocumentOCR(frontDataUrl, backDataUrl) {
 
   } catch (error) {
     console.error("OCR Error:", error);
-    alert("Failed to process document: " + error.message);
+    alert("Passport image quality is insufficient. Please capture a clearer image with good lighting.\nDetails: " + error.message);
   } finally {
     setOcrLoading(false);
     if (typeof updateSuccessScreenState === 'function') {
@@ -115,6 +130,38 @@ function getImageDimensions(dataUrl) {
   });
 }
 
+async function validateImageQuality(dataUrl) {
+  const { img, width, height } = await getImageDimensions(dataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, width, height).data;
+  
+  let brightnessSum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    brightnessSum += (0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+  }
+  const avgBrightness = brightnessSum / (width * height);
+  
+  if (avgBrightness < 30) throw new Error("Underexposure detected. Image is too dark.");
+  if (avgBrightness > 225) throw new Error("Overexposure detected. Image is too bright.");
+  
+  return true;
+}
+
+async function preprocessImage(dataUrl) {
+  const { img, width, height } = await getImageDimensions(dataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.filter = 'contrast(1.4) grayscale(100%) brightness(1.05)';
+  ctx.drawImage(img, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.95);
+}
+
 // Converts relative percentages to absolute pixels for Tesseract
 function getRect(imgWidth, imgHeight, relX, relY, relW, relH) {
   return {
@@ -125,74 +172,95 @@ function getRect(imgWidth, imgHeight, relX, relY, relW, relH) {
   };
 }
 
-// FRONT PAGE ZONES (Relative to standard Indian Passport)
+// FRONT PAGE ZONES
 async function extractFrontPageZones(imageUrl) {
   const { img, width, height } = await getImageDimensions(imageUrl);
   
-  // Define geometric zones
+  // Define highly precise horizontal bands for Indian passports
   const zones = {
-    mrz: getRect(width, height, 0.0, 0.75, 1.0, 0.25),
-    passportNo: getRect(width, height, 0.7, 0.0, 0.3, 0.15),
-    names: getRect(width, height, 0.3, 0.15, 0.65, 0.25),
-    details: getRect(width, height, 0.3, 0.40, 0.65, 0.20),
-    issue: getRect(width, height, 0.3, 0.60, 0.65, 0.15)
+    topBand: getRect(width, height, 0.0, 0.05, 1.0, 0.15),      // Type, Country, Passport No
+    surnameBand: getRect(width, height, 0.25, 0.18, 0.75, 0.10),  // Surname
+    givenNameBand: getRect(width, height, 0.25, 0.28, 0.75, 0.10),// Given Name
+    dobBand: getRect(width, height, 0.25, 0.38, 0.75, 0.12),      // Nationality, Sex, DOB
+    pobBand: getRect(width, height, 0.25, 0.50, 0.75, 0.10),      // Place of Birth
+    issueBand: getRect(width, height, 0.25, 0.60, 0.75, 0.15),    // Place of Issue, Date of Issue, Expiry
+    mrz: getRect(width, height, 0.0, 0.75, 1.0, 0.25)
   };
 
   const result = { personalInformation: {}, passportInformation: {}, mrz: {}, confidence: {} };
 
-  // 1. Process MRZ (Highest Priority, Strict Whitelist)
+  // 1. Process MRZ (Highest Priority)
   setOcrLoading(true, "Scanning MRZ Zone...");
   const { data: mrzData } = await globalMrzWorker.recognize(imageUrl, { rectangle: zones.mrz });
   const parsedMrz = parseMRZ(mrzData.text);
   result.mrz = parsedMrz.data;
   Object.assign(result.confidence, parsedMrz.confidence);
 
-  // 2. Process Passport Number Zone
-  setOcrLoading(true, "Scanning Passport Number Zone...");
-  const { data: pnoData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.passportNo });
-  const pnoClean = pnoData.text.replace(/[^A-Z0-9]/gi, '').trim().toUpperCase();
-  if (pnoClean.length >= 7) {
-    result.passportInformation.passportNumber = pnoClean;
-    result.confidence.passportNumber = pnoData.confidence;
+  // 2. Process Top Band (Passport Number)
+  setOcrLoading(true, "Scanning Top Band...");
+  const { data: topData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.topBand });
+  const pnoMatch = topData.text.match(/[A-Z][0-9]{7}/i);
+  if (pnoMatch) {
+    result.passportInformation.passportNumber = pnoMatch[0].toUpperCase();
+    result.confidence.passportNumber = topData.confidence;
   }
 
-  // 3. Process Names Zone
-  setOcrLoading(true, "Scanning Names Zone...");
-  const { data: namesData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.names });
-  const namesClean = namesData.text.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.toLowerCase().includes('surname') && !l.toLowerCase().includes('name'));
-  if (namesClean.length > 0) result.personalInformation.surname = namesClean[0];
-  if (namesClean.length > 1) result.personalInformation.givenNames = namesClean.slice(1).join(' ');
-  result.confidence.surname = namesData.confidence;
-  result.confidence.givenNames = namesData.confidence;
-
-  // 4. Process Details Zone (DOB, Sex, POB)
-  setOcrLoading(true, "Scanning Details Zone...");
-  const { data: detailsData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.details });
-  const detailsLines = detailsData.text.split('\n').map(l => l.trim().toUpperCase());
-  for (let i = 0; i < detailsLines.length; i++) {
-    const line = detailsLines[i];
-    if (line.includes('PLACE OF BIRTH') || line.includes('BIRTH')) {
-      const match = line.match(/PLACE OF BIRTH[:\s]*(.*)/i);
-      if (match && match[1].length > 3) result.personalInformation.placeOfBirth = match[1];
-      else if (detailsLines[i+1]) result.personalInformation.placeOfBirth = detailsLines[i+1];
-    }
+  // 3. Process Surname Band
+  setOcrLoading(true, "Scanning Surname...");
+  const { data: surData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.surnameBand });
+  let surLines = surData.text.split('\n').map(l => l.replace(/[^A-Z\s]/gi, '').trim()).filter(l => l && !l.toUpperCase().includes('SURNAME'));
+  if (surLines.length > 0) {
+    result.personalInformation.surname = surLines[0];
+    result.confidence.surname = surData.confidence;
   }
 
-  // 5. Process Issue Zone
-  setOcrLoading(true, "Scanning Issue Zone...");
-  const { data: issueData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.issue });
-  const issueLines = issueData.text.split('\n').map(l => l.trim().toUpperCase());
-  for (let i = 0; i < issueLines.length; i++) {
-    const line = issueLines[i];
-    if (line.includes('PLACE OF ISSUE') || line.includes('ISSUE')) {
-      const match = line.match(/PLACE OF ISSUE[:\s]*(.*)/i);
-      if (match && match[1].length > 3) result.passportInformation.placeOfIssue = match[1];
-      else if (issueLines[i+1]) result.passportInformation.placeOfIssue = issueLines[i+1];
-    }
-    const dates = line.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/g);
-    if (dates && dates.length > 0 && line.includes('ISSUE')) {
-      result.passportInformation.dateOfIssue = dates[0];
-    }
+  // 4. Process Given Name Band
+  setOcrLoading(true, "Scanning Given Names...");
+  const { data: givenData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.givenNameBand });
+  let givenLines = givenData.text.split('\n').map(l => l.replace(/[^A-Z\s]/gi, '').trim()).filter(l => l && !l.toUpperCase().includes('GIVEN NAME'));
+  if (givenLines.length > 0) {
+    result.personalInformation.givenNames = givenLines[0];
+    result.confidence.givenNames = givenData.confidence;
+  }
+
+  // 5. Process DOB Band (DOB, Sex, Nationality)
+  setOcrLoading(true, "Scanning DOB/Sex/Nationality...");
+  const { data: dobData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.dobBand });
+  const dobText = dobData.text.toUpperCase();
+  const dobMatch = dobText.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
+  if (dobMatch) {
+    result.personalInformation.dateOfBirth = dobMatch[1].replace(/-/g, '/');
+    result.confidence.dateOfBirth = dobData.confidence;
+  }
+  const sexMatch = dobText.match(/\b(M|F|MALE|FEMALE|SEX)\b/i);
+  if (sexMatch && !sexMatch[0].includes('SEX')) {
+    result.personalInformation.gender = sexMatch[0].startsWith('M') ? 'Male (M)' : 'Female (F)';
+  }
+  if (dobText.includes('INDI') || dobText.includes('IND')) {
+    result.personalInformation.nationality = 'INDIAN';
+  }
+
+  // 6. Process POB Band
+  setOcrLoading(true, "Scanning Place of Birth...");
+  const { data: pobData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.pobBand });
+  let pobLines = pobData.text.split('\n').map(l => l.replace(/[^A-Z\s,]/gi, '').trim()).filter(l => l && !l.toUpperCase().includes('BIRTH'));
+  if (pobLines.length > 0) {
+    result.personalInformation.placeOfBirth = pobLines[0];
+    result.confidence.placeOfBirth = pobData.confidence;
+  }
+
+  // 7. Process Issue Band
+  setOcrLoading(true, "Scanning Issue Details...");
+  const { data: issueData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.issueBand });
+  let issueLines = issueData.text.split('\n').map(l => l.trim().toUpperCase()).filter(l => l);
+  const dates = issueData.text.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/g);
+  if (dates && dates.length >= 1) result.passportInformation.dateOfIssue = dates[0].replace(/-/g, '/');
+  if (dates && dates.length >= 2) result.passportInformation.dateOfExpiry = dates[1].replace(/-/g, '/');
+  
+  let poiMatch = issueLines.find(l => !l.includes('ISSUE') && !l.match(/\d/) && l.length > 3);
+  if (poiMatch) {
+    result.passportInformation.placeOfIssue = poiMatch.replace(/[^A-Z\s]/g, '').trim();
+    result.confidence.placeOfIssue = issueData.confidence;
   }
 
   return result;
@@ -202,67 +270,112 @@ async function extractFrontPageZones(imageUrl) {
 async function extractBackPageZones(imageUrl) {
   const { img, width, height } = await getImageDimensions(imageUrl);
   
-  // Define back page geometric zones
+  // Define highly precise back page horizontal bands
   const zones = {
-    parents: getRect(width, height, 0.0, 0.0, 1.0, 0.40),
-    address: getRect(width, height, 0.0, 0.40, 1.0, 0.40),
-    fileNo: getRect(width, height, 0.0, 0.80, 1.0, 0.20)
+    parentsBand: getRect(width, height, 0.0, 0.05, 1.0, 0.35),
+    addressBand: getRect(width, height, 0.0, 0.40, 1.0, 0.25),
+    oldPassBand: getRect(width, height, 0.0, 0.65, 1.0, 0.15),
+    fileNoBand: getRect(width, height, 0.0, 0.80, 1.0, 0.20)
   };
 
   const result = { familyDetails: {}, address: {}, additionalInformation: {}, confidence: {} };
 
   // 1. Process Parents Zone
   setOcrLoading(true, "Scanning Parents Zone...");
-  const { data: parentsData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.parents });
-  const pLines = parentsData.text.split('\n').map(l => l.trim().toUpperCase()).filter(l => l.length > 0);
+  const { data: parentsData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.parentsBand });
+  const pLines = parentsData.text.split('\n').map(l => l.replace(/[^A-Z\s]/gi, '').trim().toUpperCase()).filter(l => l.length > 2);
+  
+  let foundFather = false, foundMother = false, foundSpouse = false;
   for (let i = 0; i < pLines.length; i++) {
     const line = pLines[i];
     if ((line.includes('FATHER') || line.includes('LEGAL')) && !result.familyDetails.fatherName) {
-      result.familyDetails.fatherName = pLines[i+1] ? pLines[i+1] : '';
+      foundFather = true;
+      if (pLines[i+1] && !pLines[i+1].includes('MOTHER')) result.familyDetails.fatherName = pLines[i+1];
+      continue;
     }
     if (line.includes('MOTHER') && !result.familyDetails.motherName) {
-      result.familyDetails.motherName = pLines[i+1] ? pLines[i+1] : '';
+      foundMother = true;
+      if (pLines[i+1] && !pLines[i+1].includes('SPOUSE') && !pLines[i+1].includes('ADDRESS')) result.familyDetails.motherName = pLines[i+1];
+      continue;
     }
     if (line.includes('SPOUSE') && !result.familyDetails.spouseName) {
-      result.familyDetails.spouseName = pLines[i+1] ? pLines[i+1] : '';
+      foundSpouse = true;
+      if (pLines[i+1] && !pLines[i+1].includes('ADDRESS')) result.familyDetails.spouseName = pLines[i+1];
+      continue;
     }
   }
   result.confidence.familyDetails = parentsData.confidence;
 
   // 2. Process Address Zone
   setOcrLoading(true, "Scanning Address Zone...");
-  const { data: addressData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.address });
-  // strict address isolation
-  const addressLines = addressData.text.split('\n').map(l => l.trim());
-  let addressAccum = [];
-  let foundAddress = false;
+  const { data: addressData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.addressBand });
+  const addressLines = addressData.text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  
+  let addressText = "";
+  let startedAddress = false;
   for (let line of addressLines) {
     let upLine = line.toUpperCase();
-    if (upLine.includes('FILE NO') || upLine.includes('OLD PASSPORT')) break; // STRICT GUARDRAIL
-    if (upLine.includes('ADDRESS')) { foundAddress = true; continue; }
-    if (foundAddress) addressAccum.push(line);
-    if (upLine.includes('PIN')) break;
+    if (upLine.includes('OLD PASS') || upLine.includes('FILE')) break;
+    if (upLine.includes('ADDRESS')) { startedAddress = true; continue; }
+    if (startedAddress) {
+      addressText += line + " ";
+    }
+  }
+  if (!startedAddress) addressText = addressLines.join(" ");
+
+  // Extract PIN (6 digits)
+  const pinMatch = addressText.match(/\b\d{6}\b/);
+  if (pinMatch) {
+    result.address.pin = pinMatch[0];
+    addressText = addressText.replace(pinMatch[0], "").trim();
+  } else {
+    // Check for 'PIN' explicitly
+    const explicitPinMatch = addressText.match(/PIN.*?(\d{6})/i);
+    if (explicitPinMatch) {
+      result.address.pin = explicitPinMatch[1];
+      addressText = addressText.replace(explicitPinMatch[0], "").trim();
+    }
   }
   
-  if (addressAccum.length > 0) {
-    result.address.addressLine1 = addressAccum[0] || '';
-    result.address.addressLine2 = addressAccum.slice(1).join(', ') || '';
+  // Clean up 'PIN:' string if it exists alone
+  addressText = addressText.replace(/PIN:?\s*/gi, "").trim();
+
+  // Extract Country
+  if (addressText.toUpperCase().includes('INDIA')) {
+    result.address.country = 'INDIA';
+    addressText = addressText.replace(/INDIA/gi, "").trim();
+  }
+
+  // A very basic extraction for State & City based on common commas
+  const parts = addressText.split(',').map(p => p.trim()).filter(p => p);
+  if (parts.length > 2) {
+    result.address.state = parts.pop();
+    result.address.city = parts.pop();
+    result.address.addressLine1 = parts[0] || '';
+    result.address.addressLine2 = parts.slice(1).join(', ');
   } else {
-    const raw = addressData.text.split('\n').map(l => l.trim()).filter(l => l);
-    result.address.addressLine1 = raw[0] || '';
-    result.address.addressLine2 = raw.slice(1).join(', ') || '';
+    // If not comma separated nicely, just split string in half roughly
+    const mid = Math.floor(addressText.length / 2);
+    result.address.addressLine1 = addressText.substring(0, mid).trim();
+    result.address.addressLine2 = addressText.substring(mid).trim();
   }
   result.confidence.address = addressData.confidence;
 
-  // 3. Process File No Zone
+  // 3. Process Old Passport Zone
+  setOcrLoading(true, "Scanning Old Passport Zone...");
+  const { data: oldPassData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.oldPassBand });
+  const oldPassMatch = oldPassData.text.match(/([A-Z0-9]{7,9})/i);
+  if (oldPassMatch && oldPassData.text.toUpperCase().includes('OLD')) {
+    result.additionalInformation.oldPassportNo = oldPassMatch[1].toUpperCase();
+  }
+  const oldDateMatch = oldPassData.text.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
+  if (oldDateMatch) result.additionalInformation.oldPassportDate = oldDateMatch[1].replace(/-/g, '/');
+
+  // 4. Process File No Zone
   setOcrLoading(true, "Scanning File No Zone...");
-  const { data: fileData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.fileNo });
+  const { data: fileData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.fileNoBand });
   const fileMatch = fileData.text.match(/([A-Z]{2}[0-9]{13})/i);
   if (fileMatch) result.additionalInformation.fileNumber = fileMatch[1].toUpperCase();
-  
-  const oldPassMatch = fileData.text.match(/OLD PASSPORT NO\.?\s*([A-Z0-9]+)/i);
-  if (oldPassMatch) result.additionalInformation.oldPassportNo = oldPassMatch[1];
-  
   result.confidence.fileNumber = fileData.confidence;
 
   return result;
@@ -361,11 +474,32 @@ function validateAndResolveConflicts(finalData) {
   finalData.validation = v;
 
   // Conflict Resolution: Prefer MRZ for Core Identifiers
-  if (mrz.passportNo) finalData.passportInformation.passportNumber = mrz.passportNo;
-  if (mrz.dob) finalData.personalInformation.dateOfBirth = formatMRZDate(mrz.dob);
-  if (mrz.expiry) finalData.passportInformation.dateOfExpiry = formatMRZDate(mrz.expiry, true);
-  if (mrz.gender) finalData.personalInformation.gender = mrz.gender === 'M' ? 'Male (M)' : (mrz.gender === 'F' ? 'Female (F)' : mrz.gender);
-  if (mrz.nationality) finalData.personalInformation.nationality = mrz.nationality;
+  if (mrz.passportNo) {
+    finalData.passportInformation.passportNumber = mrz.passportNo;
+    finalData.confidence.passportNumber = 100; // MRZ is highly trusted
+  }
+  if (mrz.dob) {
+    finalData.personalInformation.dateOfBirth = formatMRZDate(mrz.dob);
+    finalData.confidence.dateOfBirth = 100;
+  }
+  if (mrz.expiry) {
+    finalData.passportInformation.dateOfExpiry = formatMRZDate(mrz.expiry, true);
+    finalData.confidence.dateOfExpiry = 100;
+  }
+  if (mrz.gender) {
+    finalData.personalInformation.gender = mrz.gender === 'M' ? 'Male (M)' : (mrz.gender === 'F' ? 'Female (F)' : mrz.gender);
+  }
+  if (mrz.nationality) {
+    finalData.personalInformation.nationality = mrz.nationality;
+  }
+  if (mrz.surname) {
+    finalData.personalInformation.surname = mrz.surname;
+    finalData.confidence.surname = 100;
+  }
+  if (mrz.givenNames) {
+    finalData.personalInformation.givenNames = mrz.givenNames;
+    finalData.confidence.givenNames = 100;
+  }
 
   const mrzValid = v.passportNoValid && v.dobValid && v.expiryValid;
   finalData.validation.mrzValidationString = mrzValid ? '✅ Pass' : '❌ Fail';
@@ -395,9 +529,26 @@ function formatMRZDate(yymmdd, isExpiry = false) {
 // FORM POPULATION
 // -------------------------------------------------------------
 function populateForm(finalData) {
-  const setVal = (id, val) => {
+  const setVal = (id, val, conf) => {
     const el = document.getElementById(id);
-    if (el && val) el.value = val;
+    if (el) {
+      if (val !== undefined && val !== null) {
+         if (typeof conf === 'number' && conf < 80) {
+            // Below 80%, leave empty per requirements and ask user to verify
+            el.value = '';
+            el.placeholder = "Please verify " + val;
+         } else {
+            el.value = val;
+         }
+      }
+      
+      el.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
+      if (typeof conf === 'number') {
+        if (conf >= 90) el.classList.add('confidence-high');
+        else if (conf >= 80) el.classList.add('confidence-medium');
+        else el.classList.add('confidence-low');
+      }
+    }
   };
 
   const pi = finalData.personalInformation || {};
@@ -406,42 +557,50 @@ function populateForm(finalData) {
   const ad = finalData.address || {};
   const ai = finalData.additionalInformation || {};
   const mz = finalData.mrz || {};
+  const c = finalData.confidence || {};
 
   setVal('fieldPassportType', mz.passportType || pi.passportType);
   setVal('fieldCountryCode', mz.countryCode);
-  setVal('fieldPassportNo', pa.passportNumber);
-  setVal('fieldSurname', pi.surname || mz.surname);
-  setVal('fieldGivenNames', pi.givenNames || mz.givenNames);
+  setVal('fieldPassportNo', pa.passportNumber, c.passportNumber);
+  setVal('fieldSurname', pi.surname, c.surname);
+  setVal('fieldGivenNames', pi.givenNames, c.givenNames);
   setVal('fieldGender', pi.gender);
-  setVal('fieldDob', pi.dateOfBirth);
-  setVal('fieldPlaceOfBirth', pi.placeOfBirth);
+  setVal('fieldDob', pi.dateOfBirth, c.dateOfBirth);
+  setVal('fieldPlaceOfBirth', pi.placeOfBirth, c.placeOfBirth);
   setVal('fieldNationality', pi.nationality);
 
-  setVal('fieldIssueDate', pa.dateOfIssue);
-  setVal('fieldExpiryDate', pa.dateOfExpiry);
-  setVal('fieldPlaceOfIssue', pa.placeOfIssue);
+  setVal('fieldIssueDate', pa.dateOfIssue, c.dateOfIssue);
+  setVal('fieldExpiryDate', pa.dateOfExpiry, c.dateOfExpiry);
+  setVal('fieldPlaceOfIssue', pa.placeOfIssue, c.placeOfIssue);
   setVal('fieldIssuingAuthority', pa.issuingAuthority);
 
-  setVal('fieldFatherName', fd.fatherName);
-  setVal('fieldMotherName', fd.motherName);
-  setVal('fieldSpouseName', fd.spouseName);
+  setVal('fieldFatherName', fd.fatherName, c.familyDetails);
+  setVal('fieldMotherName', fd.motherName, c.familyDetails);
+  setVal('fieldSpouseName', fd.spouseName, c.familyDetails);
 
-  setVal('fieldAddressLine1', ad.addressLine1);
-  setVal('fieldAddressLine2', ad.addressLine2);
-  setVal('fieldCity', ad.city);
-  setVal('fieldState', ad.state);
-  setVal('fieldPin', ad.pin);
-  setVal('fieldCountry', ad.country || 'India');
+  setVal('fieldAddressLine1', ad.addressLine1, c.address);
+  setVal('fieldAddressLine2', ad.addressLine2, c.address);
+  setVal('fieldCity', ad.city, c.address);
+  setVal('fieldState', ad.state, c.address);
+  setVal('fieldPin', ad.pin, c.address);
+  setVal('fieldCountry', ad.country || 'India', c.address);
 
-  setVal('fieldOldPassportNo', ai.oldPassportNo);
-  setVal('fieldOldPassportDate', ai.oldPassportDate);
-  setVal('fieldOldPassportPlace', ai.oldPassportPlace);
+  setVal('fieldOldPassportNo', ai.oldPassportNo, c.oldPass);
+  setVal('fieldOldPassportDate', ai.oldPassportDate, c.oldPass);
+  setVal('fieldOldPassportPlace', ai.oldPassportPlace, c.oldPass);
 
-  setVal('fieldFileNo', ai.fileNumber);
+  setVal('fieldFileNo', ai.fileNumber, c.fileNumber);
   setVal('fieldBarcode', ai.barcode);
-  setVal('fieldOcrConfidence', finalData.confidence?.overall);
-  setVal('fieldMrzValidation', finalData.validation?.mrzValidationString);
+  
+  const overallField = document.getElementById('fieldOcrConfidence');
+  if (overallField) overallField.value = finalData.confidence?.overall || '';
+  
+  const mrzField = document.getElementById('fieldMrzValidation');
+  if (mrzField) mrzField.value = finalData.validation?.mrzValidationString || '';
 
-  setVal('fieldMrz1', mz.mrz1);
-  setVal('fieldMrz2', mz.mrz2);
+  const mrz1 = document.getElementById('fieldMrz1');
+  if (mrz1) mrz1.value = mz.mrz1 || '';
+  
+  const mrz2 = document.getElementById('fieldMrz2');
+  if (mrz2) mrz2.value = mz.mrz2 || '';
 }
