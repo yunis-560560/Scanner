@@ -172,211 +172,195 @@ function getRect(imgWidth, imgHeight, relX, relY, relW, relH) {
   };
 }
 
-// FRONT PAGE ZONES
+// FRONT PAGE PARSING (Full Page Sequential)
 async function extractFrontPageZones(imageUrl) {
-  const { img, width, height } = await getImageDimensions(imageUrl);
-  
-  // Define highly precise horizontal bands for Indian passports
-  const zones = {
-    topBand: getRect(width, height, 0.0, 0.05, 1.0, 0.15),      // Type, Country, Passport No
-    surnameBand: getRect(width, height, 0.25, 0.18, 0.75, 0.10),  // Surname
-    givenNameBand: getRect(width, height, 0.25, 0.28, 0.75, 0.10),// Given Name
-    dobBand: getRect(width, height, 0.25, 0.38, 0.75, 0.12),      // Nationality, Sex, DOB
-    pobBand: getRect(width, height, 0.25, 0.50, 0.75, 0.10),      // Place of Birth
-    issueBand: getRect(width, height, 0.25, 0.60, 0.75, 0.15),    // Place of Issue, Date of Issue, Expiry
-    mrz: getRect(width, height, 0.0, 0.75, 1.0, 0.25)
-  };
-
   const result = { personalInformation: {}, passportInformation: {}, mrz: {}, confidence: {} };
+  const { img, width, height } = await getImageDimensions(imageUrl);
 
-  // 1. Process MRZ (Highest Priority)
+  // 1. Process MRZ independently (Always Bottom 25%)
   setOcrLoading(true, "Scanning MRZ Zone...");
-  const { data: mrzData } = await globalMrzWorker.recognize(imageUrl, { rectangle: zones.mrz });
+  const mrzZone = getRect(width, height, 0.0, 0.70, 1.0, 0.30);
+  const { data: mrzData } = await globalMrzWorker.recognize(imageUrl, { rectangle: mrzZone });
   const parsedMrz = parseMRZ(mrzData.text);
   result.mrz = parsedMrz.data;
   Object.assign(result.confidence, parsedMrz.confidence);
 
-  // 2. Process Top Band (Passport Number)
-  setOcrLoading(true, "Scanning Top Band...");
-  const { data: topData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.topBand });
-  const pnoMatch = topData.text.match(/[A-Z][0-9]{7}/i);
+  // 2. Process Full Page for details
+  setOcrLoading(true, "Scanning Front Page Text...");
+  const { data: fullData } = await globalOcrWorker.recognize(imageUrl);
+  const lines = fullData.text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  let pnoMatch = fullData.text.match(/\b([A-Z][0-9]{7})\b/i);
   if (pnoMatch) {
-    result.passportInformation.passportNumber = pnoMatch[0].toUpperCase();
-    result.confidence.passportNumber = topData.confidence;
+    result.passportInformation.passportNumber = pnoMatch[1].toUpperCase();
+    result.confidence.passportNumber = fullData.confidence;
   }
 
-  // 3. Process Surname Band
-  setOcrLoading(true, "Scanning Surname...");
-  const { data: surData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.surnameBand });
-  let surLines = surData.text.split('\n').map(l => l.replace(/[^A-Z\s]/gi, '').trim()).filter(l => l && !l.toUpperCase().includes('SURNAME'));
-  if (surLines.length > 0) {
-    result.personalInformation.surname = surLines[0];
-    result.confidence.surname = surData.confidence;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toUpperCase();
+    
+    // Surname
+    if (line.includes('SURNAME') && !result.personalInformation.surname) {
+      if (lines[i+1] && !lines[i+1].toUpperCase().includes('GIVEN')) {
+        result.personalInformation.surname = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      }
+    }
+    
+    // Given Name
+    if (line.includes('GIVEN NAME') && !result.personalInformation.givenNames) {
+      if (lines[i+1] && !lines[i+1].toUpperCase().includes('NATIONALITY')) {
+        result.personalInformation.givenNames = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      }
+    }
+    
+    // Nationality
+    if (line.includes('INDIAN') || line.includes('IND ')) {
+      result.personalInformation.nationality = 'INDIAN';
+    }
+
+    // Sex
+    const sexMatch = line.match(/\b(M|F|MALE|FEMALE)\b/);
+    if (sexMatch && !result.personalInformation.gender) {
+      result.personalInformation.gender = sexMatch[0].startsWith('M') ? 'Male (M)' : 'Female (F)';
+    }
+    
+    // Dates
+    const dates = line.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/g);
+    if (dates) {
+      if (line.includes('BIRTH') && !result.personalInformation.dateOfBirth) {
+        result.personalInformation.dateOfBirth = dates[0].replace(/-/g, '/');
+      } else if (line.includes('ISSUE') && dates.length >= 1) {
+        result.passportInformation.dateOfIssue = dates[0].replace(/-/g, '/');
+        if (dates.length >= 2) result.passportInformation.dateOfExpiry = dates[1].replace(/-/g, '/');
+      }
+    }
+
+    // Place of Birth
+    if ((line.includes('BIRTH') || line.includes('PLACE OF BIRTH')) && !result.personalInformation.placeOfBirth) {
+      // It's usually the line below the Date of Birth or on the same line
+      if (lines[i+1] && lines[i+1].length > 4 && !lines[i+1].includes('ISSUE')) {
+        result.personalInformation.placeOfBirth = lines[i+1].replace(/[^A-Z\s,]/g, '').trim();
+      }
+    }
+
+    // Place of Issue
+    if ((line.includes('ISSUE') || line.includes('PLACE OF ISSUE')) && !result.passportInformation.placeOfIssue) {
+      if (lines[i+1] && lines[i+1].length > 3 && !lines[i+1].match(/\d/)) {
+        result.passportInformation.placeOfIssue = lines[i+1].replace(/[^A-Z\s,]/g, '').trim();
+      }
+    }
   }
 
-  // 4. Process Given Name Band
-  setOcrLoading(true, "Scanning Given Names...");
-  const { data: givenData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.givenNameBand });
-  let givenLines = givenData.text.split('\n').map(l => l.replace(/[^A-Z\s]/gi, '').trim()).filter(l => l && !l.toUpperCase().includes('GIVEN NAME'));
-  if (givenLines.length > 0) {
-    result.personalInformation.givenNames = givenLines[0];
-    result.confidence.givenNames = givenData.confidence;
-  }
-
-  // 5. Process DOB Band (DOB, Sex, Nationality)
-  setOcrLoading(true, "Scanning DOB/Sex/Nationality...");
-  const { data: dobData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.dobBand });
-  const dobText = dobData.text.toUpperCase();
-  const dobMatch = dobText.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
-  if (dobMatch) {
-    result.personalInformation.dateOfBirth = dobMatch[1].replace(/-/g, '/');
-    result.confidence.dateOfBirth = dobData.confidence;
-  }
-  const sexMatch = dobText.match(/\b(M|F|MALE|FEMALE|SEX)\b/i);
-  if (sexMatch && !sexMatch[0].includes('SEX')) {
-    result.personalInformation.gender = sexMatch[0].startsWith('M') ? 'Male (M)' : 'Female (F)';
-  }
-  if (dobText.includes('INDI') || dobText.includes('IND')) {
-    result.personalInformation.nationality = 'INDIAN';
-  }
-
-  // 6. Process POB Band
-  setOcrLoading(true, "Scanning Place of Birth...");
-  const { data: pobData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.pobBand });
-  let pobLines = pobData.text.split('\n').map(l => l.replace(/[^A-Z\s,]/gi, '').trim()).filter(l => l && !l.toUpperCase().includes('BIRTH'));
-  if (pobLines.length > 0) {
-    result.personalInformation.placeOfBirth = pobLines[0];
-    result.confidence.placeOfBirth = pobData.confidence;
-  }
-
-  // 7. Process Issue Band
-  setOcrLoading(true, "Scanning Issue Details...");
-  const { data: issueData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.issueBand });
-  let issueLines = issueData.text.split('\n').map(l => l.trim().toUpperCase()).filter(l => l);
-  const dates = issueData.text.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/g);
-  if (dates && dates.length >= 1) result.passportInformation.dateOfIssue = dates[0].replace(/-/g, '/');
-  if (dates && dates.length >= 2) result.passportInformation.dateOfExpiry = dates[1].replace(/-/g, '/');
+  // Fallbacks if confidence is missing
+  result.confidence.surname = fullData.confidence;
+  result.confidence.givenNames = fullData.confidence;
+  result.confidence.dateOfBirth = fullData.confidence;
+  result.confidence.placeOfBirth = fullData.confidence;
+  result.confidence.placeOfIssue = fullData.confidence;
   
-  let poiMatch = issueLines.find(l => !l.includes('ISSUE') && !l.match(/\d/) && l.length > 3);
-  if (poiMatch) {
-    result.passportInformation.placeOfIssue = poiMatch.replace(/[^A-Z\s]/g, '').trim();
-    result.confidence.placeOfIssue = issueData.confidence;
-  }
-
   return result;
 }
 
-// BACK PAGE ZONES
+// BACK PAGE PARSING (Full Page Sequential)
 async function extractBackPageZones(imageUrl) {
-  const { img, width, height } = await getImageDimensions(imageUrl);
-  
-  // Define highly precise back page horizontal bands
-  const zones = {
-    parentsBand: getRect(width, height, 0.0, 0.05, 1.0, 0.35),
-    addressBand: getRect(width, height, 0.0, 0.40, 1.0, 0.25),
-    oldPassBand: getRect(width, height, 0.0, 0.65, 1.0, 0.15),
-    fileNoBand: getRect(width, height, 0.0, 0.80, 1.0, 0.20)
-  };
-
   const result = { familyDetails: {}, address: {}, additionalInformation: {}, confidence: {} };
-
-  // 1. Process Parents Zone
-  setOcrLoading(true, "Scanning Parents Zone...");
-  const { data: parentsData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.parentsBand });
-  const pLines = parentsData.text.split('\n').map(l => l.replace(/[^A-Z\s]/gi, '').trim().toUpperCase()).filter(l => l.length > 2);
   
-  let foundFather = false, foundMother = false, foundSpouse = false;
-  for (let i = 0; i < pLines.length; i++) {
-    const line = pLines[i];
-    if ((line.includes('FATHER') || line.includes('LEGAL')) && !result.familyDetails.fatherName) {
-      foundFather = true;
-      if (pLines[i+1] && !pLines[i+1].includes('MOTHER')) result.familyDetails.fatherName = pLines[i+1];
-      continue;
-    }
-    if (line.includes('MOTHER') && !result.familyDetails.motherName) {
-      foundMother = true;
-      if (pLines[i+1] && !pLines[i+1].includes('SPOUSE') && !pLines[i+1].includes('ADDRESS')) result.familyDetails.motherName = pLines[i+1];
-      continue;
-    }
-    if (line.includes('SPOUSE') && !result.familyDetails.spouseName) {
-      foundSpouse = true;
-      if (pLines[i+1] && !pLines[i+1].includes('ADDRESS')) result.familyDetails.spouseName = pLines[i+1];
-      continue;
-    }
-  }
-  result.confidence.familyDetails = parentsData.confidence;
-
-  // 2. Process Address Zone
-  setOcrLoading(true, "Scanning Address Zone...");
-  const { data: addressData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.addressBand });
-  const addressLines = addressData.text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  setOcrLoading(true, "Scanning Back Page Text...");
+  const { data: fullData } = await globalOcrWorker.recognize(imageUrl);
+  const lines = fullData.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
   
   let addressText = "";
   let startedAddress = false;
-  for (let line of addressLines) {
-    let upLine = line.toUpperCase();
-    if (upLine.includes('OLD PASS') || upLine.includes('FILE')) break;
-    if (upLine.includes('ADDRESS')) { startedAddress = true; continue; }
-    if (startedAddress) {
-      addressText += line + " ";
-    }
-  }
-  if (!startedAddress) addressText = addressLines.join(" ");
 
-  // Extract PIN (6 digits)
-  const pinMatch = addressText.match(/\b\d{6}\b/);
-  if (pinMatch) {
-    result.address.pin = pinMatch[0];
-    addressText = addressText.replace(pinMatch[0], "").trim();
-  } else {
-    // Check for 'PIN' explicitly
-    const explicitPinMatch = addressText.match(/PIN.*?(\d{6})/i);
-    if (explicitPinMatch) {
-      result.address.pin = explicitPinMatch[1];
-      addressText = addressText.replace(explicitPinMatch[0], "").trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toUpperCase();
+    
+    // Father Name
+    if ((line.includes('FATHER') || line.includes('LEGAL')) && !result.familyDetails.fatherName) {
+      if (lines[i+1] && !lines[i+1].toUpperCase().includes('MOTHER')) {
+        result.familyDetails.fatherName = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      }
+    }
+    
+    // Mother Name
+    if (line.includes('MOTHER') && !result.familyDetails.motherName) {
+      if (lines[i+1] && !lines[i+1].toUpperCase().includes('SPOUSE') && !lines[i+1].toUpperCase().includes('ADDRESS')) {
+        result.familyDetails.motherName = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      }
+    }
+    
+    // Spouse Name
+    if (line.includes('SPOUSE') && !result.familyDetails.spouseName) {
+      if (lines[i+1] && !lines[i+1].toUpperCase().includes('ADDRESS')) {
+        result.familyDetails.spouseName = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      }
+    }
+
+    // Address Parsing (accumulate until PIN or Old Passport)
+    if (line.includes('OLD PASS') || line.includes('FILE')) startedAddress = false;
+    
+    if (startedAddress) {
+      addressText += lines[i] + " ";
+      if (line.includes('PIN')) startedAddress = false;
+    }
+    
+    if (line.includes('ADDRESS')) {
+      startedAddress = true;
+    }
+
+    // Old Passport
+    const oldPassMatch = line.match(/([A-Z0-9]{7,9})/i);
+    if (oldPassMatch && line.includes('OLD')) {
+      result.additionalInformation.oldPassportNo = oldPassMatch[1].toUpperCase();
+    }
+    const oldDateMatch = line.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
+    if (oldDateMatch && line.includes('OLD')) {
+      result.additionalInformation.oldPassportDate = oldDateMatch[1].replace(/-/g, '/');
+    }
+
+    // File Number
+    const fileMatch = line.match(/([A-Z]{2}[0-9]{13})/i);
+    if (fileMatch) result.additionalInformation.fileNumber = fileMatch[1].toUpperCase();
+  }
+
+  // Process Accumulated Address
+  if (!addressText && lines.length > 5) {
+     // Fallback: If "Address" label wasn't found, try to guess it's between names and PIN
+     let pinIndex = lines.findIndex(l => l.toUpperCase().includes('PIN'));
+     if (pinIndex > 0) {
+       addressText = lines.slice(Math.max(0, pinIndex - 2), pinIndex + 1).join(' ');
+     }
+  }
+
+  if (addressText) {
+    const pinMatch = addressText.match(/\b\d{6}\b/);
+    if (pinMatch) {
+      result.address.pin = pinMatch[0];
+      addressText = addressText.replace(pinMatch[0], "").trim();
+    }
+    addressText = addressText.replace(/PIN:?\s*/gi, "").trim();
+
+    if (addressText.toUpperCase().includes('INDIA')) {
+      result.address.country = 'INDIA';
+      addressText = addressText.replace(/INDIA/gi, "").trim();
+    }
+
+    const parts = addressText.split(',').map(p => p.trim()).filter(p => p);
+    if (parts.length > 2) {
+      result.address.state = parts.pop();
+      result.address.city = parts.pop();
+      result.address.addressLine1 = parts[0] || '';
+      result.address.addressLine2 = parts.slice(1).join(', ');
+    } else {
+      const mid = Math.floor(addressText.length / 2);
+      result.address.addressLine1 = addressText.substring(0, mid).trim();
+      result.address.addressLine2 = addressText.substring(mid).trim();
     }
   }
   
-  // Clean up 'PIN:' string if it exists alone
-  addressText = addressText.replace(/PIN:?\s*/gi, "").trim();
-
-  // Extract Country
-  if (addressText.toUpperCase().includes('INDIA')) {
-    result.address.country = 'INDIA';
-    addressText = addressText.replace(/INDIA/gi, "").trim();
-  }
-
-  // A very basic extraction for State & City based on common commas
-  const parts = addressText.split(',').map(p => p.trim()).filter(p => p);
-  if (parts.length > 2) {
-    result.address.state = parts.pop();
-    result.address.city = parts.pop();
-    result.address.addressLine1 = parts[0] || '';
-    result.address.addressLine2 = parts.slice(1).join(', ');
-  } else {
-    // If not comma separated nicely, just split string in half roughly
-    const mid = Math.floor(addressText.length / 2);
-    result.address.addressLine1 = addressText.substring(0, mid).trim();
-    result.address.addressLine2 = addressText.substring(mid).trim();
-  }
-  result.confidence.address = addressData.confidence;
-
-  // 3. Process Old Passport Zone
-  setOcrLoading(true, "Scanning Old Passport Zone...");
-  const { data: oldPassData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.oldPassBand });
-  const oldPassMatch = oldPassData.text.match(/([A-Z0-9]{7,9})/i);
-  if (oldPassMatch && oldPassData.text.toUpperCase().includes('OLD')) {
-    result.additionalInformation.oldPassportNo = oldPassMatch[1].toUpperCase();
-  }
-  const oldDateMatch = oldPassData.text.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/);
-  if (oldDateMatch) result.additionalInformation.oldPassportDate = oldDateMatch[1].replace(/-/g, '/');
-
-  // 4. Process File No Zone
-  setOcrLoading(true, "Scanning File No Zone...");
-  const { data: fileData } = await globalOcrWorker.recognize(imageUrl, { rectangle: zones.fileNoBand });
-  const fileMatch = fileData.text.match(/([A-Z]{2}[0-9]{13})/i);
-  if (fileMatch) result.additionalInformation.fileNumber = fileMatch[1].toUpperCase();
-  result.confidence.fileNumber = fileData.confidence;
+  result.confidence.familyDetails = fullData.confidence;
+  result.confidence.address = fullData.confidence;
+  result.confidence.fileNumber = fullData.confidence;
 
   return result;
 }
