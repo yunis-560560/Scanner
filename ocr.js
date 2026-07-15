@@ -216,16 +216,20 @@ async function extractFrontPageZones(imageUrl) {
     
     // Surname
     if (line.includes('SURNAME') && !result.personalInformation.surname) {
-      if (lines[i+1] && !lines[i+1].toUpperCase().includes('GIVEN')) {
-        result.personalInformation.surname = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      let val = line.substring(line.indexOf('SURNAME') + 7).replace(/\/?\s*NOM/g, '').replace(/[^A-Z\s]/g, '').trim();
+      if (val.length < 2 && lines[i+1] && !lines[i+1].toUpperCase().includes('GIVEN')) {
+        val = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
+      if (val.length >= 2) result.personalInformation.surname = val;
     }
     
     // Given Name
     if (line.includes('GIVEN NAME') && !result.personalInformation.givenNames) {
-      if (lines[i+1] && !lines[i+1].toUpperCase().includes('NATIONALITY')) {
-        result.personalInformation.givenNames = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      let val = line.substring(line.indexOf('GIVEN NAME') + 10).replace(/\(S\)/g, '').replace(/\/?\s*PR[EÉ]NOMS/g, '').replace(/[^A-Z\s]/g, '').trim();
+      if (val.length < 2 && lines[i+1] && !lines[i+1].toUpperCase().includes('NATIONALITY') && !lines[i+1].toUpperCase().includes('SEX')) {
+        val = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
+      if (val.length >= 2) result.personalInformation.givenNames = val;
     }
     
     // Nationality
@@ -239,30 +243,38 @@ async function extractFrontPageZones(imageUrl) {
       result.personalInformation.gender = sexMatch[0].startsWith('M') ? 'Male (M)' : 'Female (F)';
     }
     
-    // Dates
+    // Dates (Date of Birth, Date of Issue, Date of Expiry)
     const dates = line.match(/(\d{2}[/\-]\d{2}[/\-]\d{4})/g);
     if (dates) {
-      if (line.includes('BIRTH') && !result.personalInformation.dateOfBirth) {
+      // Check current line and previous line for context
+      const context = (line + " " + (lines[i-1] || "")).toUpperCase();
+      
+      if (context.includes('BIRTH') && !result.personalInformation.dateOfBirth) {
         result.personalInformation.dateOfBirth = dates[0].replace(/-/g, '/');
-      } else if (line.includes('ISSUE') && dates.length >= 1) {
+      } else if (context.includes('ISSUE') && !result.passportInformation.dateOfIssue) {
         result.passportInformation.dateOfIssue = dates[0].replace(/-/g, '/');
         if (dates.length >= 2) result.passportInformation.dateOfExpiry = dates[1].replace(/-/g, '/');
+      } else if (context.includes('EXPIRY') && !result.passportInformation.dateOfExpiry) {
+        result.passportInformation.dateOfExpiry = dates[0].replace(/-/g, '/');
       }
     }
 
     // Place of Birth
     if ((line.includes('BIRTH') || line.includes('PLACE OF BIRTH')) && !result.personalInformation.placeOfBirth) {
-      // It's usually the line below the Date of Birth or on the same line
-      if (lines[i+1] && lines[i+1].length > 4 && !lines[i+1].includes('ISSUE')) {
-        result.personalInformation.placeOfBirth = lines[i+1].replace(/[^A-Z\s,]/g, '').trim();
+      let val = line.substring(line.indexOf('BIRTH') + 5).replace(/[^A-Z\s,]/g, '').trim();
+      if (val.length < 3 && lines[i+1] && !lines[i+1].includes('ISSUE') && !lines[i+1].match(/\d/)) {
+        val = lines[i+1].replace(/[^A-Z\s,]/g, '').trim();
       }
+      if (val.length >= 3) result.personalInformation.placeOfBirth = val;
     }
 
     // Place of Issue
     if ((line.includes('ISSUE') || line.includes('PLACE OF ISSUE')) && !result.passportInformation.placeOfIssue) {
-      if (lines[i+1] && lines[i+1].length > 3 && !lines[i+1].match(/\d/)) {
-        result.passportInformation.placeOfIssue = lines[i+1].replace(/[^A-Z\s,]/g, '').trim();
+      let val = line.substring(line.indexOf('ISSUE') + 5).replace(/[^A-Z\s,]/g, '').trim();
+      if (val.length < 3 && lines[i+1] && !lines[i+1].match(/\d/)) {
+        val = lines[i+1].replace(/[^A-Z\s,]/g, '').trim();
       }
+      if (val.length >= 3) result.passportInformation.placeOfIssue = val;
     }
   }
 
@@ -292,23 +304,29 @@ async function extractBackPageZones(imageUrl) {
     
     // Father Name
     if ((line.includes('FATHER') || line.includes('LEGAL')) && !result.familyDetails.fatherName) {
-      if (lines[i+1] && !lines[i+1].toUpperCase().includes('MOTHER')) {
-        result.familyDetails.fatherName = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      let val = line.substring(line.indexOf('FATHER') + 6).replace(/\/?\s*LEGAL GUARDIAN/g, '').replace(/[^A-Z\s]/g, '').trim();
+      if (val.length < 2 && lines[i+1] && !lines[i+1].toUpperCase().includes('MOTHER')) {
+        val = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
+      if (val.length >= 2) result.familyDetails.fatherName = val;
     }
     
     // Mother Name
     if (line.includes('MOTHER') && !result.familyDetails.motherName) {
-      if (lines[i+1] && !lines[i+1].toUpperCase().includes('SPOUSE') && !lines[i+1].toUpperCase().includes('ADDRESS')) {
-        result.familyDetails.motherName = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      let val = line.substring(line.indexOf('MOTHER') + 6).replace(/[^A-Z\s]/g, '').trim();
+      if (val.length < 2 && lines[i+1] && !lines[i+1].toUpperCase().includes('SPOUSE') && !lines[i+1].toUpperCase().includes('ADDRESS')) {
+        val = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
+      if (val.length >= 2) result.familyDetails.motherName = val;
     }
     
     // Spouse Name
     if (line.includes('SPOUSE') && !result.familyDetails.spouseName) {
-      if (lines[i+1] && !lines[i+1].toUpperCase().includes('ADDRESS')) {
-        result.familyDetails.spouseName = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
+      let val = line.substring(line.indexOf('SPOUSE') + 6).replace(/[^A-Z\s]/g, '').trim();
+      if (val.length < 2 && lines[i+1] && !lines[i+1].toUpperCase().includes('ADDRESS')) {
+        val = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
+      if (val.length >= 2) result.familyDetails.spouseName = val;
     }
 
     // Address Parsing (accumulate until PIN or Old Passport)
@@ -473,7 +491,7 @@ function validateAndResolveConflicts(finalData) {
   finalData.validation = v;
 
   // Conflict Resolution: Prefer MRZ for Core Identifiers
-  if (mrz.passportNo) {
+  if (mrz.passportNo && mrz.passportNo.length > 3) {
     finalData.passportInformation.passportNumber = mrz.passportNo;
     finalData.confidence.passportNumber = 100; // MRZ is highly trusted
   }
@@ -491,11 +509,13 @@ function validateAndResolveConflicts(finalData) {
   if (mrz.nationality) {
     finalData.personalInformation.nationality = mrz.nationality;
   }
-  if (mrz.surname) {
+  // Only override names from MRZ if MRZ extracted them reliably (more than 2 chars)
+  // Otherwise, trust the front page sequential parsing which might have done a better job
+  if (mrz.surname && mrz.surname.length > 2) {
     finalData.personalInformation.surname = mrz.surname;
     finalData.confidence.surname = 100;
   }
-  if (mrz.givenNames) {
+  if (mrz.givenNames && mrz.givenNames.length > 2) {
     finalData.personalInformation.givenNames = mrz.givenNames;
     finalData.confidence.givenNames = 100;
   }
