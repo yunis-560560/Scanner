@@ -51,7 +51,6 @@ function resetOCRCache() {
       el.value = ''; 
       el.style.backgroundColor = ''; 
       el.style.borderColor = ''; 
-      el.placeholder = '';
       el.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
     }
   });
@@ -139,9 +138,10 @@ function mergeOCRData(base, addition) {
 // IMAGE PROCESSING & ZONE EXTRACTION
 // -------------------------------------------------------------
 function getImageDimensions(dataUrl) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve({ img, width: img.width, height: img.height });
+    img.onerror = () => reject(new Error("Failed to load image"));
     img.src = dataUrl;
   });
 }
@@ -168,14 +168,9 @@ async function validateImageQuality(dataUrl) {
 }
 
 async function preprocessImage(dataUrl) {
-  const { img, width, height } = await getImageDimensions(dataUrl);
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.filter = 'contrast(1.4) grayscale(100%) brightness(1.05)';
-  ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.95);
+  // Tesseract usually does its own binarization.
+  // Aggressive filters can wash out bright photos.
+  return dataUrl; 
 }
 
 // Converts relative percentages to absolute pixels for Tesseract
@@ -193,9 +188,9 @@ async function extractFrontPageZones(imageUrl) {
   const result = { personalInformation: {}, passportInformation: {}, mrz: {}, confidence: {} };
   const { img, width, height } = await getImageDimensions(imageUrl);
 
-  // 1. Process MRZ independently (Always Bottom 25%)
+  // 1. Process MRZ independently (Always Bottom 40% to be safe)
   setOcrLoading(true, "Scanning MRZ Zone...");
-  const mrzZone = getRect(width, height, 0.0, 0.70, 1.0, 0.30);
+  const mrzZone = getRect(width, height, 0.0, 0.60, 1.0, 0.40);
   const { data: mrzData } = await globalMrzWorker.recognize(imageUrl, { rectangle: mrzZone });
   const parsedMrz = parseMRZ(mrzData.text);
   result.mrz = parsedMrz.data;
@@ -206,7 +201,7 @@ async function extractFrontPageZones(imageUrl) {
   const { data: fullData } = await globalOcrWorker.recognize(imageUrl);
   const lines = fullData.text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  let pnoMatch = fullData.text.match(/\b([A-Z][0-9]{7})\b/i);
+  let pnoMatch = fullData.text.match(/\b([A-Z]{1,2}[0-9]{6,7})\b/i);
   if (pnoMatch) {
     result.passportInformation.passportNumber = pnoMatch[1].toUpperCase();
     result.confidence.passportNumber = fullData.confidence;
@@ -216,14 +211,14 @@ async function extractFrontPageZones(imageUrl) {
     const line = lines[i].toUpperCase();
     
     // Surname
-    if (line.includes('SURNAME') && !result.personalInformation.surname) {
-      if (lines[i+1] && !lines[i+1].toUpperCase().includes('GIVEN')) {
+    if (line.match(/SUR.*NAME/i) && !result.personalInformation.surname) {
+      if (lines[i+1] && !lines[i+1].toUpperCase().match(/GIVEN/i)) {
         result.personalInformation.surname = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
     }
     
     // Given Name
-    if (line.includes('GIVEN NAME') && !result.personalInformation.givenNames) {
+    if (line.match(/GIVEN.*NAME/i) && !result.personalInformation.givenNames) {
       if (lines[i+1] && !lines[i+1].toUpperCase().includes('NATIONALITY')) {
         result.personalInformation.givenNames = lines[i+1].replace(/[^A-Z\s]/g, '').trim();
       }
@@ -443,11 +438,20 @@ function parseMRZ(rawText) {
       data.dobCheckDigit = line2.substring(19, 20);
       
       data.gender = line2.substring(20, 21);
+      if (data.gender === '<') data.gender = ''; // if empty
       
       data.expiry = line2.substring(21, 27);
       data.expiryCheckDigit = line2.substring(27, 28);
       
       data.compositeCheckDigit = line2.substring(43, 44);
+    }
+  }
+  
+  // If MRZ failed, try to parse MRZ from full text if available
+  if (Object.keys(data).length === 0) {
+    const mrzFallback = sanitizeMRZ(rawText);
+    if (mrzFallback.length >= 2) {
+      // same logic could be applied here if full text passed
     }
   }
   return { data, confidence };
